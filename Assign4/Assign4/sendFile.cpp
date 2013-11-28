@@ -52,31 +52,37 @@ void send_file()
 {
     int packets_sent = 0;
 
-    if(!enquire_line())
-        cerr << "could not enquire line" << endl;
-    // loop through all the data
-    while(!buffer.is_empty())
+    while(1)
     {
-        if((packets_sent < 5))
+        // loop through all the data
+        while(!BUFFER.is_empty())
         {
-            if(!transmit_packet(buffer.get_packet()))
-                cerr << "error sending packet" << endl;
-        }else
-        {
-            // send end of transmition
-            //WriteFile(hCommPort, EOT, 2, &dwBytesWritten, NULL);
-            sendEOT(hComm);
-            ReleaseSemaphore(hSem, 1, NULL);
-            if(!wait_for_acknowledgement())
-                cerr << "timeout" << endl;
-            packets_sent = 0;
+            if(packets_sent < 5)
+            {
+                // if starting to send data, enquire line
+                if(packets_sent == 0)
+                    if(!enquire_line())
+                        cerr << "could not enquire line" << endl;
+                // transmit a packet
+                if(!transmit_packet(BUFFER.get_packet()))
+                    cerr << "error sending packet" << endl;
+                packets_sent++;
+                BUFFER.remove_packet();
+            }else
+            {
+                // send end of transmition
+                //WriteFile(hCommPort, EOT, 2, &dwBytesWritten, NULL);
+                sendEOT(hComm);
+                ReleaseSemaphore(hSem, 1, NULL);
+                if(!wait_for_acknowledgement())
+                    cerr << "timeout" << endl;
+                packets_sent = 0;
+            }
         }
-        packets_sent++;
-        buffer.remove_packet();
+        // send end of transmition
+        sendEOT(hComm);
+        ReleaseSemaphore(hSem, 1, NULL);
     }
-    // send end of transmition
-    sendEOT(hComm);
-    ReleaseSemaphore(hSem, 1, NULL);
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -100,12 +106,11 @@ void send_file()
 bool enquire_line()
 {
     // send enq
-    
     if (!sendENQ(hComm))
         return false;
 
     // wait for reciever to acknowledge line is free
-    return wait_for_acknowledgement();;
+    return wait_for_acknowledgement();
 }
 
 /*------------------------------------------------------------------------------------------------------------------
