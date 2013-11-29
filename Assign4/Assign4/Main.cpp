@@ -216,6 +216,9 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 	std::vector<std::string> file;
 	file.push_back("Hello world, this is a line of text for testing purposes, it is gunna be fucking huge. Winter is coming. Weiner Weiner Weiner.");
 	std::fstream ifs;
+	OPENFILENAME ofn;
+	static TCHAR szFilter[] = TEXT ("All Files (*.*)\0*.*\0\0") ;
+	static TCHAR szFileName[MAX_PATH], szTitleName[MAX_PATH] ;
 
 
 	if (cxClient && cyClient) {
@@ -290,18 +293,53 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 				break;
 				case IDM_Connect:
 
-					ifs = OpenFile("file.txt");
-
 					OpenConnection(hComm);
-
-					readFile(ifs);
 
 				break;
 				case IDM_Disconnect:
 				break;
 				case IDM_OpenFile:
 
+					ofn.lStructSize       = sizeof (OPENFILENAME) ;
+					ofn.hwndOwner         = hwnd ;
+					ofn.hInstance         = NULL ;
+					ofn.lpstrFilter       = szFilter ;
+					ofn.lpstrCustomFilter = NULL ;
+					ofn.nMaxCustFilter    = 0 ;
+					ofn.nFilterIndex      = 0 ;
+					ofn.lpstrFile         = NULL ;          // Set in Open and Close functions
+					ofn.nMaxFile          = MAX_PATH ;
+					ofn.lpstrFileTitle    = NULL ;          // Set in Open and Close functions
+					ofn.nMaxFileTitle     = MAX_PATH ;
+					ofn.lpstrInitialDir   = NULL ;
+					ofn.lpstrTitle        = NULL ;
+					ofn.Flags             = 0 ;             // Set in Open and Close functions
+					ofn.nFileOffset       = 0 ;
+					ofn.nFileExtension    = 0 ;
+					ofn.lpstrDefExt       = TEXT ("txt") ;
+					ofn.lCustData         = 0L ;
+					ofn.lpfnHook          = NULL ;
+					ofn.lpTemplateName    = NULL ;
 
+					ofn.hwndOwner         = hwnd ;
+					ofn.lpstrFile         = szFileName ;
+					ofn.lpstrFileTitle    = szTitleName ;
+					ofn.Flags             = OFN_HIDEREADONLY | OFN_CREATEPROMPT ;
+
+					if (GetOpenFileName(&ofn)) {
+						
+						std::wstring wfilename(szFileName);
+						std::string filename;
+
+						for(auto x: wfilename) {
+							filename += x;
+						}
+						
+						ifs = OpenFile(filename);
+
+
+						readFile(ifs);
+					}
 
 				break;
 			}

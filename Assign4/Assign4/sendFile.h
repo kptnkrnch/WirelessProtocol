@@ -19,6 +19,4 @@ bool wait_for_acknowledgement();
 void sendEOT(HANDLE hComm);
 bool sendENQ(HANDLE hComm);
 
-Buffer buffer;
-
 #endif

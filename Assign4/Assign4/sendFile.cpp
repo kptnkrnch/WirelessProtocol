@@ -27,6 +27,7 @@ DWORD dwWaitResult;
 
 extern HANDLE hSem;
 extern HANDLE hComm;
+Buffer buffer;
 
 /*------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: send_file
@@ -58,7 +59,7 @@ void send_file()
     while(1)
     {
         // loop through all the data
-        while(!BUFFER.is_empty())
+        while(!buffer.is_empty())
         {
             if(packets_sent < 5)
             {
@@ -67,10 +68,10 @@ void send_file()
                     if(!enquire_line())
                         cerr << "could not enquire line" << endl;
                 // transmit a packet
-                if(!transmit_packet(BUFFER.get_packet()))
+                if(!transmit_packet(buffer.get_packet()))
                     cerr << "error sending packet" << endl;
                 packets_sent++;
-                BUFFER.remove_packet();
+                buffer.remove_packet();
             }else
             {
                 // send end of transmition

@@ -28,6 +28,7 @@
 #include <iomanip>
 #include <string>
 
+#include "Buffer.h"
 #include "crc.h"
 #include "packetize.h"
 
@@ -36,6 +37,7 @@ using namespace std;
 int send_control;
 int recv_control = SOT1;
 
+extern Buffer buffer;
 
 /*------------------------------------------------------------------------------------------------------------------
 -- FUNCTION:		recievePacket
@@ -207,8 +209,10 @@ void packetize(unsigned char data[DATA_SIZE]) {
 	
 	//send the packet.
 	
-	for(int i = 0; i < PACKET_SIZE; i++) {
-		cout << (char)packet[i];
-	}
+	//for(int i = 0; i < PACKET_SIZE; i++) {
+	//	cout << (char)packet[i];
+	//}
 	
+	buffer.add_packet(packet);
+
 }
