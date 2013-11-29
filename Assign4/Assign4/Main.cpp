@@ -7,6 +7,8 @@
 #include <fstream>
 #include <vector>
 #include <sstream>
+
+#include "sendFile.h"
 #include "packetize.h"
 
 class Stats {
@@ -126,6 +128,9 @@ DWORD PollingThrdID;
 bool areaset = false;
 int iVertPos = 0, iHorzPos = 0;
 RECT text_area;
+
+HANDLE sendThread = 0;
+HANDLE recvThread = 0;
 
 DWORD WINAPI OutputThread(LPVOID);
 DWORD WINAPI PollingThread(LPVOID);
@@ -294,7 +299,7 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 				case IDM_Connect:
 
 					OpenConnection(hComm);
-
+					
 				break;
 				case IDM_Disconnect:
 				break;
@@ -337,8 +342,16 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 						
 						ifs = OpenFile(filename);
 
-
 						readFile(ifs);
+
+						DWORD threadID;
+						DWORD exitStatus;
+
+						
+						if (sendThread == 0 || (GetExitCodeThread(sendThread, &exitStatus) && exitStatus != STILL_ACTIVE)) {
+							sendThread = CreateThread(NULL, 0, sendBufferThread, 0, NULL, &threadID);
+						}
+
 					}
 
 				break;
@@ -681,8 +694,3 @@ void DisplayFileProgressStats(const RECT& rect) {
 
 void DisplayProtocolOperations(const RECT& rect) {
 }
-
-
-
-
-

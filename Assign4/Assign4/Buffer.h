@@ -1,6 +1,7 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
+#include <Windows.h>
 #include <iostream>
 #include <string>
 #include <queue>
@@ -8,10 +9,13 @@
 class Buffer
 {
     public:
+
         Buffer(){}
 
         // adds a packet to the queue
-        void add_packet(const char* packet){ buff.push(packet); }
+        void add_packet(const char* packet){ 
+			buff.push(packet);
+		}
 
         // retrieves a packet and pops it off the buffer
         const char* get_packet() 
@@ -22,8 +26,15 @@ class Buffer
                 std::cerr << "buffer empty" << std::endl;
             return NULL;
         }
+
         // removes packet from queue
-        void remove_packet() { buff.pop();}
+        void remove_packet() { 
+
+			if (!buff.empty()) {
+				buff.pop();
+			}
+		}
+
         // checks to see if buffer is empty
         bool is_empty() { return buff.empty(); }
 

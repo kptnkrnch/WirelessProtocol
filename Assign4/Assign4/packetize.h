@@ -13,8 +13,8 @@
 #define PACKET_SIZE 1024
 #define DATA_SIZE PACKET_SIZE - 4
 
-bool recievePacket(unsigned char[]);
+bool recievePacket(char[]);
 void readFile(std::fstream&);
-void packetize(unsigned char[]);
+void packetize(char[]);
 
 #endif

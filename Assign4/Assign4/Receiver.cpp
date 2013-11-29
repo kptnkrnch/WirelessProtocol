@@ -1,4 +1,5 @@
 #include <windows.h>
+#include "packetize.h"
 #define SYN 0x16
 #define ENQ 0x05
 #define ACK 0x06
@@ -13,8 +14,6 @@ _OVERLAPPED ov;
 void sendACK(HANDLE hComm);
 void sendNAK(HANDLE hComm);
 void waitForPackets(HANDLE hComm);
-
-bool recievePacket(unsigned char[]);
 
 
 
@@ -60,7 +59,7 @@ void sendNAK(HANDLE hComm){
 
 void waitForPackets(HANDLE hComm){
 	bool timeout = false;
-	unsigned char c[1024];
+	char c[1024];
 	DWORD obj;
 	DWORD event;
 	DWORD bytesRead;

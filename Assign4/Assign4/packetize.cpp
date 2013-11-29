@@ -59,7 +59,7 @@ extern Buffer buffer;
 --					data out of the packet and sends it to be displayed.
 --
 ----------------------------------------------------------------------------------------------------------------------*/
-bool recievePacket(unsigned char data[]) {
+bool recievePacket(char data[]) {
 	
 	if (data[0] != SYN) {
 		cerr << "packet didnt start with SYN" << endl;
@@ -73,18 +73,18 @@ bool recievePacket(unsigned char data[]) {
 	
 	recv_control = recv_control == SOT1 ? SOT2 : SOT1;
 	
-	unsigned char *packet_data = &data[2];
-	unsigned short first, second;
+	char *packet_data = &data[2];
+	short first, second;
 	
 	first = (unsigned short)data[PACKET_SIZE - 2];
 	second = (unsigned short)data[PACKET_SIZE - 1];
 	
 	
-	unsigned short crc = (first << 8) + second;
-	unsigned short crc_check = CRCCCITT(packet_data, DATA_SIZE, SEED, crc);
+	unsigned short crc = ((first << 8) & 0xff00) + second;
+	unsigned short crc_check = crc16(packet_data, DATA_SIZE);
 	
-	if (crc_check != 0) {
-		cerr << "CRC fail. Got " << hex << setw(4) << setfill('0') << crc << " and expected " << CRCCCITT(packet_data, DATA_SIZE, SEED, 0) << endl;
+	if (crc_check != crc) {
+		cerr << "CRC fail. Got " << hex << setw(4) << setfill('0') << crc << " and expected " << crc16(packet_data, DATA_SIZE) << endl;
 		return false;
 	}
 	
@@ -125,7 +125,7 @@ bool recievePacket(unsigned char data[]) {
 ----------------------------------------------------------------------------------------------------------------------*/
 void readFile(fstream &is) {
 	
-	unsigned char data[DATA_SIZE];
+	char data[DATA_SIZE];
 	int tmp;
 	int count = 0;
 	
@@ -180,7 +180,7 @@ void readFile(fstream &is) {
 --					SYN - 1|SOT1/SOT2 - 1|DATA - 1020| CRC - 2
 --
 ----------------------------------------------------------------------------------------------------------------------*/
-void packetize(unsigned char data[DATA_SIZE]) {
+void packetize(char data[DATA_SIZE]) {
 
 	char packet[PACKET_SIZE];
 	
@@ -197,7 +197,7 @@ void packetize(unsigned char data[DATA_SIZE]) {
 	}
 	
 	//get the crc value
-	unsigned short crc = CRCCCITT(data, DATA_SIZE, SEED, 0);
+	unsigned short crc = crc16(data, DATA_SIZE);
 	unsigned short first, second;
 	
 	//take out each part of it so we can store it in 2 characters.

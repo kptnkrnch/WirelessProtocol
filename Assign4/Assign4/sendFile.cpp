@@ -18,6 +18,8 @@
 -- NOTES:
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
+#include <Windows.h>
+#include <iostream>
 #include "sendFile.h"
 
 using namespace std;
@@ -28,6 +30,20 @@ DWORD dwWaitResult;
 extern HANDLE hSem;
 extern HANDLE hComm;
 Buffer buffer;
+
+DWORD WINAPI sendBufferThread(LPVOID n){
+
+	//infinitely wait for the buffer to have at least one packet.
+	while (1) {
+
+		send_packets();
+
+
+
+	}
+
+
+}
 
 /*------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: send_file
@@ -52,7 +68,7 @@ Buffer buffer;
 --        data. As packets are transmited, they are removed from the buffer. 
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
-void send_file()
+void send_packets()
 {
     int packets_sent = 0;
 
@@ -80,6 +96,7 @@ void send_file()
                 if(!wait_for_acknowledgement())
                     cerr << "timeout" << endl;
                 packets_sent = 0;
+				break;
             }
         }
         // send end of transmition

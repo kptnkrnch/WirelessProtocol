@@ -1,8 +1,8 @@
 #ifndef CRC_H
 #define CRC_H
 
-#include <cstdlib>
+#define POLY 0x8408
 
-unsigned short CRCCCITT(unsigned char *data, size_t length, unsigned short seed, unsigned short final);
+unsigned short crc16(char *data_p, unsigned short length);
 
 #endif

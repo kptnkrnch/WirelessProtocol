@@ -12,7 +12,8 @@
 
 #define PACKET_SIZE 1024
 
-void send_file(char* data[]);
+DWORD WINAPI sendBufferThread(LPVOID n);
+void send_packets();
 bool enquire_line();
 bool transmit_packet(const char* data);
 bool wait_for_acknowledgement();
