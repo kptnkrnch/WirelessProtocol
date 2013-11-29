@@ -182,7 +182,7 @@ void readFile(fstream &is) {
 ----------------------------------------------------------------------------------------------------------------------*/
 void packetize(char data[DATA_SIZE]) {
 
-	char packet[PACKET_SIZE];
+	char *packet = (char*)malloc(PACKET_SIZE);
 	
 	//Set the first to chars to describe what type of packet it is.
 	packet[0] = SYN;

@@ -34,15 +34,13 @@ Buffer buffer;
 DWORD WINAPI sendBufferThread(LPVOID n){
 
 	//infinitely wait for the buffer to have at least one packet.
-	while (1) {
+	while (!buffer.is_empty()) {
 
 		send_packets();
 
-
-
 	}
 
-
+	return 0;
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -70,39 +68,25 @@ DWORD WINAPI sendBufferThread(LPVOID n){
 ----------------------------------------------------------------------------------------------------------------------*/
 void send_packets()
 {
-    int packets_sent = 0;
+	int packets_sent = 0;
 
-    while(1)
+	// if starting to send data, enquire line
+	if(!enquire_line())
+		cerr << "could not enquire line" << endl;
+
+    // loop through all the data
+    while(!buffer.is_empty() && packets_sent < 5)
     {
-        // loop through all the data
-        while(!buffer.is_empty())
-        {
-            if(packets_sent < 5)
-            {
-                // if starting to send data, enquire line
-                if(packets_sent == 0)
-                    if(!enquire_line())
-                        cerr << "could not enquire line" << endl;
-                // transmit a packet
-                if(!transmit_packet(buffer.get_packet()))
-                    cerr << "error sending packet" << endl;
-                packets_sent++;
-                buffer.remove_packet();
-            }else
-            {
-                // send end of transmition
-                sendEOT(hComm);
-                ReleaseSemaphore(hSem, 1, NULL);
-                if(!wait_for_acknowledgement())
-                    cerr << "timeout" << endl;
-                packets_sent = 0;
-				break;
-            }
-        }
-        // send end of transmition
-        sendEOT(hComm);
-        ReleaseSemaphore(hSem, 1, NULL);
+		// transmit a packet
+		if(!transmit_packet(buffer.get_packet()))
+			cerr << "error sending packet" << endl;
+		packets_sent++;
+		buffer.remove_packet();
     }
+    // send end of transmition
+    sendEOT(hComm);
+    ReleaseSemaphore(hSem, 1, NULL);
+	//delay after we send EOT
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -154,7 +138,7 @@ bool enquire_line()
 bool transmit_packet(const char* data)
 {
     // write data to port
-    return WriteFile(hComm, &data,(DWORD) sizeof(data), &dwBytesWritten, NULL);
+    return WriteFile(hComm, data,(DWORD) PACKET_SIZE, &dwBytesWritten, NULL);
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -189,6 +173,8 @@ bool wait_for_acknowledgement()
         case WAIT_ABANDONED: 
             return false;  
     }
+
+	return false;
 }
 /*------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: sendEOT

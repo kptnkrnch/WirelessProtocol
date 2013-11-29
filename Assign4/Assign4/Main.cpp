@@ -135,7 +135,7 @@ HANDLE recvThread = 0;
 DWORD WINAPI OutputThread(LPVOID);
 DWORD WINAPI PollingThread(LPVOID);
 std::fstream OpenFile(std::string FileLocation);
-HANDLE& OpenConnection(HANDLE& comm);
+void OpenConnection(HANDLE& comm);
 void DisplayStatistics(const RECT& rect, const Stats& stats, HDC& hdc);
 void DisplayReceivedFileData(const RECT& rect, std::vector<std::string> FileContents, HDC& hdc);
 
@@ -439,13 +439,12 @@ std::fstream OpenFile(std::string FileLocation) {
 	return file;
 }
 
-HANDLE& OpenConnection(HANDLE& comm) {
-	if ((hComm = CreateFile (lpszCommName4, GENERIC_READ | GENERIC_WRITE, 0,
+void OpenConnection(HANDLE& hcomm) {
+	if ((hComm = CreateFile (lpszCommName1, GENERIC_READ | GENERIC_WRITE, 0,
    			NULL, OPEN_EXISTING, NULL, NULL))
             == INVALID_HANDLE_VALUE)
 	{
    		MessageBox (NULL, TEXT("Error opening COM port:"), TEXT(""), MB_OK);
-		throw "Error opening COM port!";
 	}
 }
 
