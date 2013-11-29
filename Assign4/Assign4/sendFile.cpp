@@ -36,6 +36,7 @@ extern HANDLE hComm;
 -- REVISIONS: 11.23.13 - replaced leftover pseudocode
 --            11.26.13 - added semaphores and error checking
 --            11.27.13 - added buffer and fix ENQ/EOT sending
+--            11.28.13 - put in while loop
 --
 -- DESIGNER: Damien Sathanielle
 --
@@ -45,7 +46,9 @@ extern HANDLE hComm;
 --
 -- RETURNS: void.
 --
--- NOTES:
+-- NOTES: send_file() will constantly run at the start of program. It constantly checks the buffer for packets to
+--        send. A maximum of 5 packets at a time will be sent before giving up the line to the reciever to transmit
+--        data. As packets are transmited, they are removed from the buffer. 
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
 void send_file()
@@ -71,7 +74,6 @@ void send_file()
             }else
             {
                 // send end of transmition
-                //WriteFile(hCommPort, EOT, 2, &dwBytesWritten, NULL);
                 sendEOT(hComm);
                 ReleaseSemaphore(hSem, 1, NULL);
                 if(!wait_for_acknowledgement())
@@ -100,7 +102,7 @@ void send_file()
 --
 -- RETURNS: bool.
 --
--- NOTES: 
+-- NOTES: transmits and enquiry for the line and waits for a response
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
 bool enquire_line()
@@ -128,7 +130,7 @@ bool enquire_line()
 --
 -- RETURNS: bool.
 --
--- NOTES:
+-- NOTES: Writes a packet to serial port
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
 bool transmit_packet(const char* data)
@@ -152,19 +154,20 @@ bool transmit_packet(const char* data)
 --
 -- RETURNS: bool.
 --
--- NOTES:
+-- NOTES: waits for an acknowledgement event from recieve function and returns true if an ACK was recieved
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
 bool wait_for_acknowledgement()
 {
 
     dwWaitResult = WaitForSingleObject(hSem,INFINITE);
-
+    // wait for ack (return true of ack)
     switch(dwWaitResult)
     {
+        // recieved ack
         case WAIT_OBJECT_0:            
             return true; 
-
+        // ack not recieved
         case WAIT_ABANDONED: 
             return false;  
     }
@@ -184,7 +187,7 @@ bool wait_for_acknowledgement()
 --
 -- RETURNS: void.
 --
--- NOTES: sentds end of transmition character
+-- NOTES: packetize and sents end of transmition
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
 void sendEOT(HANDLE hComm)
@@ -210,7 +213,7 @@ void sendEOT(HANDLE hComm)
 --
 -- RETURNS: bool.
 --
--- NOTES: sends and ENQ character to enquire the line
+-- NOTES: packetize and sents enquiry for line
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
 bool sendENQ(HANDLE hComm)
