@@ -114,7 +114,7 @@ char str[80] = "";
 LRESULT CALLBACK WndProc (HWND, UINT, WPARAM, LPARAM);
 #pragma warning (disable: 4096)
 
-TCHAR	lpszCommName1[] = TEXT("com1");
+TCHAR	lpszCommName1[] = TEXT("COM1");
 TCHAR	lpszCommName2[] = TEXT("com2");
 TCHAR	lpszCommName3[] = TEXT("com3");
 TCHAR	lpszCommName4[] = TEXT("com4");
@@ -138,7 +138,7 @@ Globals *global;
 DWORD WINAPI OutputThread(LPVOID);
 DWORD WINAPI PollingThread(LPVOID);
 std::fstream OpenFile(std::string FileLocation);
-void OpenConnection(HANDLE& comm);
+bool OpenConnection(HANDLE& comm);
 void DisplayStatistics(const RECT& rect, const Stats& stats, HDC& hdc);
 void DisplayReceivedFileData(const RECT& rect, std::vector<std::string> FileContents, HDC& hdc);
 
@@ -222,7 +222,7 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 	HANDLE _font;
 	BOOL fRedraw;
 	std::vector<std::string> file;
-	file.push_back("Hello world, this is a line of text for testing purposes, it is gunna be fucking huge. Winter is coming. Weiner Weiner Weiner.");
+	file.push_back("Hello world.");
 	std::fstream ifs;
 	OPENFILENAME ofn;
 	static TCHAR szFilter[] = TEXT ("All Files (*.*)\0*.*\0\0") ;
@@ -250,6 +250,8 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 		case WM_CREATE:
 
 			global = (Globals*)malloc(sizeof(Globals));
+
+			global->hSem = CreateSemaphore(NULL, 0, 1, NULL);
 
 		break;
 		case WM_COMMAND:
@@ -302,11 +304,12 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 				break;
 				case IDM_Connect:
 
-					OpenConnection(global->hComm);
+					if (OpenConnection(global->hComm)) {
 
-					DWORD threadID;
+						DWORD threadID;
 
-					recvThread = CreateThread(NULL, 0, receiverThread, global, NULL, &threadID);
+						recvThread = CreateThread(NULL, 0, receiverThread, global, NULL, &threadID);
+					}
 					
 				break;
 				case IDM_Disconnect:
@@ -446,13 +449,15 @@ std::fstream OpenFile(std::string FileLocation) {
 	return file;
 }
 
-void OpenConnection(HANDLE& hComm) {
+bool OpenConnection(HANDLE& hComm) {
 	if ((hComm = CreateFile (lpszCommName1, GENERIC_READ | GENERIC_WRITE, 0,
-   			NULL, OPEN_EXISTING, NULL, NULL))
+		NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL))
             == INVALID_HANDLE_VALUE)
 	{
    		MessageBox (NULL, TEXT("Error opening COM port:"), TEXT(""), MB_OK);
+		return false;
 	}
+	return true;
 }
 
 void CloseConnection(HANDLE& comm) {

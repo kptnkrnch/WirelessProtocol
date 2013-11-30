@@ -23,18 +23,22 @@
 #include "sendFile.h"
 #include "global.h"
 
+
 using namespace std;
 
 DWORD dwBytesWritten;
 
 Buffer buffer;
 
+extern OVERLAPPED ov;
+
 DWORD WINAPI sendBufferThread(LPVOID n){
 
 	Globals* global = (Globals*)n;
+	dwBytesWritten = 0;
 
 	//infinitely wait for the buffer to have at least one packet.
-	while (!buffer.is_empty()) {
+	if (!buffer.is_empty()) {
 
 		send_packets(global);
 
@@ -119,8 +123,7 @@ void send_packets(Globals *global)
 bool enquire_line(HANDLE hComm, HANDLE hSem)
 {
     // send enq
-    if (!sendControlChar(hComm, ENQ))
-        return false;
+    sendControlChar(hComm, ENQ);
 
     // wait for reciever to acknowledge line is free
     return wait_for_acknowledgement(hSem);
@@ -147,7 +150,7 @@ bool enquire_line(HANDLE hComm, HANDLE hSem)
 bool transmit_packet(HANDLE hComm, const char* data)
 {
     // write data to port
-    return WriteFile(hComm, data,(DWORD) PACKET_SIZE, &dwBytesWritten, NULL);
+    return WriteFile(hComm, data,(DWORD) PACKET_SIZE, &dwBytesWritten, &ov);
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -171,7 +174,7 @@ bool transmit_packet(HANDLE hComm, const char* data)
 bool wait_for_acknowledgement(HANDLE hSem)
 {
 
-    DWORD dwWaitResult = WaitForSingleObject(hSem, 200);
+    DWORD dwWaitResult = WaitForSingleObject(hSem, TIMEOUT_TIME);
     // wait for ack (return true of ack)
     switch(dwWaitResult)
     {
@@ -203,10 +206,10 @@ bool wait_for_acknowledgement(HANDLE hSem)
 -- NOTES: packetize and sents end of transmition
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
-bool sendControlChar(HANDLE hComm, char control)
+void sendControlChar(HANDLE hComm, char control)
 {
     char c[2];
     c[0] = SYN;
     c[1] = control;
-    return WriteFile(hComm, c, 2, &dwBytesWritten, NULL);
+    WriteFile(hComm, c, 2, &dwBytesWritten, &ov);
 }

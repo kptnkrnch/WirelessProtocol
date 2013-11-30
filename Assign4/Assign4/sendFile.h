@@ -12,12 +12,13 @@
 #define SYN 0x16
 
 #define PACKET_SIZE 1024
+#define TIMEOUT_TIME INFINITE
 
 DWORD WINAPI sendBufferThread(LPVOID n);
 void send_packets(Globals*);
 bool enquire_line(HANDLE, HANDLE);
 bool transmit_packet(HANDLE, const char*);
 bool wait_for_acknowledgement(HANDLE);
-bool sendControlChar(HANDLE hComm, char);
+void sendControlChar(HANDLE hComm, char);
 
 #endif
