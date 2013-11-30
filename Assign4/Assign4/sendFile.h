@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "buffer.h"
+#include "global.h"
 
 #define ENQ 0x05
 #define EOT 0x04
@@ -13,11 +14,10 @@
 #define PACKET_SIZE 1024
 
 DWORD WINAPI sendBufferThread(LPVOID n);
-void send_packets();
-bool enquire_line();
-bool transmit_packet(const char* data);
-bool wait_for_acknowledgement();
-void sendEOT(HANDLE hComm);
-bool sendENQ(HANDLE hComm);
+void send_packets(Globals*);
+bool enquire_line(HANDLE, HANDLE);
+bool transmit_packet(HANDLE, const char*);
+bool wait_for_acknowledgement(HANDLE);
+bool sendControlChar(HANDLE hComm, char);
 
 #endif

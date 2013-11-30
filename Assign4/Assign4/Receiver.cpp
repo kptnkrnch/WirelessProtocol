@@ -1,46 +1,38 @@
 #include <windows.h>
 #include "packetize.h"
-#define SYN 0x16
-#define ENQ 0x05
-#define ACK 0x06
-#define NAK 0x15
-#define EOT 0x04
-
-HANDLE hComm;
-HANDLE hSem;
+#include "Receiver.h"
+#include "sendFile.h"
+#include "global.h"
 
 _OVERLAPPED ov;
-
-void sendACK(HANDLE hComm);
-void sendNAK(HANDLE hComm);
-void waitForPackets(HANDLE hComm);
 
 
 
 DWORD WINAPI receiverThread(LPVOID n){
+	Globals *globals = (Globals*)n;
 	DWORD bytesRead;
 	DWORD event;
 	char c[2];
 
-	SetCommMask(hComm, EV_RXCHAR);
+	SetCommMask(globals->hComm, EV_RXCHAR);
 
 	while(1){
-		WaitForSingleObject(hSem, 0);
-		WaitCommEvent(hComm, &event, NULL);
+		WaitForSingleObject(globals->hSem, 0);
+		WaitCommEvent(globals->hComm, &event, NULL);
 		if(event & EV_RXCHAR){
-			ReadFile(hComm, c, 2, &bytesRead, NULL);
+			ReadFile(globals->hComm, c, 2, &bytesRead, NULL);
 			if(c[0] == SYN && c[1] == ENQ){
-				sendACK(hComm);
-				waitForPackets(hComm);
+				sendControlChar(globals->hComm, ACK);
+				waitForPackets(globals->hComm, globals->hSem);
 			}
 			if(c[0] == SYN && c[1] == ACK){
-				ReleaseSemaphore(hSem, 0, NULL);
+				ReleaseSemaphore(globals->hSem, 0, NULL);
 			}
 		}
 	}
 	return 0;
 }
-
+/*
 void sendACK(HANDLE hComm){
 	char c[2];
 	c[0] = SYN;
@@ -55,9 +47,9 @@ void sendNAK(HANDLE hComm){
 	c[1] = NAK;
 	DWORD bytesRead;
 	WriteFile(hComm, c, 2, &bytesRead, NULL);
-}
+}*/
 
-void waitForPackets(HANDLE hComm){
+void waitForPackets(HANDLE hComm, HANDLE hSem){
 	bool timeout = false;
 	char c[1024];
 	DWORD obj;
@@ -80,10 +72,10 @@ void waitForPackets(HANDLE hComm){
 				break;
 			} else {
 				ReadFile(hComm, c+2, 1022, &bytesRead, NULL);
-				if(!recievePacket(c)){
-					sendNAK(hComm);
+				if(recievePacket(c)){
+					sendControlChar(hComm, ACK);
 				} else{
-					sendACK(hComm);
+					sendControlChar(hComm, NAK);
 				}
 			}
 		} else {

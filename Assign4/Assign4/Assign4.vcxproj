@@ -20,7 +20,9 @@
   <ItemGroup>
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="crc.h" />
+    <ClInclude Include="global.h" />
     <ClInclude Include="packetize.h" />
+    <ClInclude Include="Receiver.h" />
     <ClInclude Include="sendFile.h" />
     <ClInclude Include="winmenu2.h" />
   </ItemGroup>

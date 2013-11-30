@@ -10,6 +10,8 @@
 
 #include "sendFile.h"
 #include "packetize.h"
+#include "Receiver.h"
+#include "global.h"
 
 class Stats {
 public:
@@ -120,7 +122,6 @@ int curCom = 0; //The last com port set up
 bool comset = false; //Conditional checking if at least one com port has been set
 bool KillReader = false; //used for killing the Reading thread
 COMMCONFIG	cc; //Com port configuration
-extern HANDLE hComm; //Handle to the com port
 HANDLE opThrd; //Handle to the reading thread
 HANDLE PollingThrd; //Handle to the reading thread
 DWORD opThrdID;
@@ -131,6 +132,8 @@ RECT text_area;
 
 HANDLE sendThread = 0;
 HANDLE recvThread = 0;
+
+Globals *global;
 
 DWORD WINAPI OutputThread(LPVOID);
 DWORD WINAPI PollingThread(LPVOID);
@@ -246,7 +249,7 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 	{
 		case WM_CREATE:
 
-
+			global = (Globals*)malloc(sizeof(Globals));
 
 		break;
 		case WM_COMMAND:
@@ -295,10 +298,15 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 						comset = true;
 						curCom = 4;
 					}
+
 				break;
 				case IDM_Connect:
 
-					OpenConnection(hComm);
+					OpenConnection(global->hComm);
+
+					DWORD threadID;
+
+					recvThread = CreateThread(NULL, 0, receiverThread, global, NULL, &threadID);
 					
 				break;
 				case IDM_Disconnect:
@@ -347,9 +355,8 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 						DWORD threadID;
 						DWORD exitStatus;
 
-						
 						if (sendThread == 0 || (GetExitCodeThread(sendThread, &exitStatus) && exitStatus != STILL_ACTIVE)) {
-							sendThread = CreateThread(NULL, 0, sendBufferThread, 0, NULL, &threadID);
+							sendThread = CreateThread(NULL, 0, sendBufferThread, global, NULL, &threadID);
 						}
 
 					}
@@ -439,7 +446,7 @@ std::fstream OpenFile(std::string FileLocation) {
 	return file;
 }
 
-void OpenConnection(HANDLE& hcomm) {
+void OpenConnection(HANDLE& hComm) {
 	if ((hComm = CreateFile (lpszCommName1, GENERIC_READ | GENERIC_WRITE, 0,
    			NULL, OPEN_EXISTING, NULL, NULL))
             == INVALID_HANDLE_VALUE)

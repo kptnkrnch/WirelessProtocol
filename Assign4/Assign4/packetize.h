@@ -3,10 +3,7 @@
 
 #include <fstream>
 
-#define NUL  0x00
-#define SOT1 0x11
-#define SOT2 0x12
-#define SYN  0x16
+#include "global.h"
 
 #define SEED 0xff
 
