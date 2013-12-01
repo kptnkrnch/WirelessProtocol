@@ -1,3 +1,29 @@
+/*------------------------------------------------------------------------------------------------------------------
+-- SOURCE FILE:     Receiver.cpp
+--
+-- PROGRAM:         name
+--
+-- FUNCTIONS:	    bool read(HANDLE&, char*, int);
+--                  DWORD WINAPI receiverThread(LPVOID);
+--		    void waitForPackets(HANDLE&, HANDLE&){
+--
+-- DATE:            11.22.13
+--
+-- REVISIONS:       11.27.13 - changed to use overlapped struct
+--             	    11.27.13 - changed to return a bool rather than void
+--                  11.27.13 - changed to call the read() function
+--                  11.29.13 - added stat updating
+--                  11.29.13 - change to read in all bytes rather than one byte at a time
+--
+-- DESIGNER:        Cory Thomas
+--
+-- PROGRAMMERS:     Cory Thomas, Joshua Campbell, Jordan Marling
+--
+-- NOTES:           This file handles all data receiving in the protocol. The functions will handle control packets
+--		    and pass on data packets to packetize.cpp
+--
+----------------------------------------------------------------------------------------------------------------------*/
+
 #include <windows.h>
 #include "packetize.h"
 #include "Receiver.h"
@@ -12,10 +38,11 @@ bool flag = false;
 /*------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: read
 --
--- DATE: 11.27.13
+-- DATE: 11.22.13
 --
 -- REVISIONS: 11.27.13 - changed to use overlapped struct
 --            11.27.13 - changed to return a bool rather than void
+--            11.29.13 - added stat updating
 --            11.29.13 - change to read in all bytes rather than one byte at a time
 --
 -- DESIGNER: Cory Thomas
@@ -97,7 +124,7 @@ bool read(HANDLE& hComm, char* c, int bytesToRead, bool &timeout) {
 /*------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: receiverThread
 --
--- DATE: 11.21.13
+-- DATE: 11.22.13
 --
 -- REVISIONS: 11.27.13 - changed to call the read() function
 --            11.29.13 - added stat updating
@@ -169,6 +196,26 @@ DWORD WINAPI receiverThread(LPVOID n){
         return 0;
 }
 
+/*------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: waitForPackets
+--
+-- DATE: 11.22.13
+--
+-- REVISIONS: 11.27.13 - changed to call the read() function
+--            11.29.13 - added stat updating
+--
+-- DESIGNER: Cory Thomas
+--
+-- PROGRAMMERS: Cory Thomas, Joshua Campbell, Jordan Marling
+--
+-- INTERFACE: void waitForPackets(HANDLE&, HANDLE&){
+--
+-- RETURNS: void
+--
+-- NOTES: waitForPackets() will continue reading packets until an EOT is received. If receivePacket() returns a good
+--	  packet, the fuction will send an ACK. If the packet was bad, it will send a NAK.
+-- 
+----------------------------------------------------------------------------------------------------------------------*/
 void waitForPackets(HANDLE& hComm, HANDLE& hSem){
         bool timeout = false;
 		char c[1024] = {0};
