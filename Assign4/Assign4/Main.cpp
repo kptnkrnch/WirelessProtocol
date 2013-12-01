@@ -94,7 +94,6 @@ public:
 			return (totalPacketsReceived_/elapsedTime_); 
 		}
 	}
-private:
 	int totalPacketsSent_;
 	int totalPacketsReceived_;
 	int totalErrors_;
