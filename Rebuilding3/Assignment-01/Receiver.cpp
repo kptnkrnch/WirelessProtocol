@@ -12,11 +12,11 @@ bool flag = false;
 /*------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: read
 --
--- DATE: 11.21.13
+-- DATE: 11.27.13
 --
 -- REVISIONS: 11.27.13 - changed to use overlapped struct
 --            11.27.13 - changed to return a bool rather than void
---            11.28.13 - change to read in all bytes rather than one byte at a time
+--            11.29.13 - change to read in all bytes rather than one byte at a time
 --
 -- DESIGNER: Cory Thomas
 --
@@ -94,6 +94,28 @@ bool read(HANDLE& hComm, char* c, int bytesToRead, bool &timeout) {
 			return false;
 }
 
+/*------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: receiverThread
+--
+-- DATE: 11.21.13
+--
+-- REVISIONS: 11.27.13 - changed to call the read() function
+--            11.29.13 - added stat updating
+--
+-- DESIGNER: Cory Thomas
+--
+-- PROGRAMMERS: Cory Thomas, Jordan Marling
+--
+-- INTERFACE: DWORD WINAPI receiverThread(LPVOID);
+--
+-- RETURNS: DWORD
+--
+-- NOTES: receiverThread() is a thread function to handle receiving data through the serial port. The function will 
+--        call read() and will continue the loop is data is not successfully read or analize the data. Depending on 
+--        the control characters recieved, the function will either release a semaphore, letting TX know what control
+--        characters were received, or call waitForPackets().
+-- 
+----------------------------------------------------------------------------------------------------------------------*/
 DWORD WINAPI receiverThread(LPVOID n){
         Globals *globals = (Globals*)n;
         DWORD event;
