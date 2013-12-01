@@ -5,6 +5,7 @@
 #include "global.h"
 
 extern OVERLAPPED ov;
+extern Stats stats;
 DWORD bytesRead = 0;
 bool flag = false;
 
@@ -33,21 +34,21 @@ bool flag = false;
 ----------------------------------------------------------------------------------------------------------------------*/
 
 bool read(HANDLE& hComm, char* c, int bytesToRead) {
-		COMSTAT cs;
+	COMSTAT cs;
         DWORD obj;
-		DWORD errors;
+	DWORD errors;
         DWORD ev = 0;
         DWORD bytesTransferred = 0;
         DWORD br = 0;
-		DWORD br_total = 0;
+	DWORD br_total = 0;
         bool wait;
-		bool complete = false;
+	bool complete = false;
 
 		//while (!complete) {
 			wait = WaitCommEvent(hComm, &ev, &ov);
 			if (wait)
 				return false;
-			obj = WaitForSingleObject(ov.hEvent, INFINITE);
+			obj = WaitForSingleObject(ov.hEvent, 200);
 			//if (wait) {
 			ClearCommError(hComm, &errors, &cs);
 			if (obj == WAIT_OBJECT_0 && ev & EV_RXCHAR && (cs.cbInQue == 2 || cs.cbInQue >= 1024)) {
@@ -80,6 +81,9 @@ bool read(HANDLE& hComm, char* c, int bytesToRead) {
 
 					//}
 				return true;
+			}
+			if(obj == WAIT_TIMEOUT){
+				stats.totalTimeouts_++;
 			}
 			//}
 		//}
@@ -123,10 +127,15 @@ DWORD WINAPI receiverThread(LPVOID n){
                         //MessageBox(NULL, TEXT("GOT ENQ"), TEXT(""), MB_OK);
                         sendControlChar(*(globals->hComm), ACK);
                         waitForPackets(*(globals->hComm), *(globals->hSem));
+                        stats.totalRequests_++;
                 }
                 if(c[0] == SYN && c[1] == ACK){
                         //MessageBox(NULL, TEXT("GOT ACK"), TEXT(""), MB_OK);
                         ReleaseSemaphore(*(globals->hSem), 1, NULL);
+                        stats.totalACKsReceived_++;
+                }
+                if(c[0]) == SYN && c[1] == NAK){
+                	stats.totalNAKsReceived_++;
                 }
         }
         return 0;
