@@ -7,10 +7,6 @@
 #include "buffer.h"
 #include "global.h"
 
-#define ENQ 0x05
-#define EOT 0x04
-#define SYN 0x16
-
 #define PACKET_SIZE 1024
 #define TIMEOUT_TIME 200
 

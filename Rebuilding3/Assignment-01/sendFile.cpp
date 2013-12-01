@@ -23,17 +23,34 @@
 #include "sendFile.h"
 #include "global.h"
 
-extern Stats stats;
-
 using namespace std;
 
-DWORD dwBytesWritten;
-
+DWORD  dwBytesWritten;
 Buffer buffer;
 
 extern OVERLAPPED ov;
+extern Stats stats;
 
-DWORD WINAPI sendBufferThread(LPVOID n){
+/*------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: sendBufferThread
+--
+-- DATE: 11.29.13
+--
+-- REVISIONS: 
+--
+-- DESIGNER: Damien Sathanielle
+--
+-- PROGRAMMER: Damien Sathanielle
+--
+-- INTERFACE: DWORD WINAPI sendBufferThread(LPVOID n);
+--
+-- RETURNS: void.
+--
+-- NOTES: 
+--
+----------------------------------------------------------------------------------------------------------------------*/
+DWORD WINAPI sendBufferThread(LPVOID n)
+{
 
 	Globals* global = (Globals*)n;
 	dwBytesWritten = 0;
@@ -49,7 +66,8 @@ DWORD WINAPI sendBufferThread(LPVOID n){
 }
 
 /*------------------------------------------------------------------------------------------------------------------
--- FUNCTION: send_file
+-- FUNCTION: send_file (old)
+--           send_packets
 --
 -- DATE: 11.21.13
 --
@@ -57,12 +75,14 @@ DWORD WINAPI sendBufferThread(LPVOID n){
 --            11.26.13 - added semaphores and error checking
 --            11.27.13 - added buffer and fix ENQ/EOT sending
 --            11.28.13 - put in while loop
+--            11.30.13 - change name to send_packets and interface
 --
 -- DESIGNER: Damien Sathanielle
 --
 -- PROGRAMMER: Damien Sathanielle
 --
--- INTERFACE: void send_file(char* data[]);
+-- INTERFACE: void send_file(char* data[]); (old)
+--            void send_packets(Globals *global)
 --
 -- RETURNS: void.
 --
@@ -77,7 +97,8 @@ void send_packets(Globals *global)
 	int packets_sent = 0;
 
 	// if starting to send data, enquire line
-	if(!enquire_line(*(global->hComm), *(global->hSem))) {
+	if(!enquire_line(*(global->hComm), *(global->hSem))) 
+	{
 		cerr << "could not enquire line" << endl;
 		//return;
 	}
