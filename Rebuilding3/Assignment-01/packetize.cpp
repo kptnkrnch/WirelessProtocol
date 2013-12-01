@@ -80,7 +80,7 @@ bool recievePacket(char data[]) {
 	second = (unsigned short)data[PACKET_SIZE - 1];
 	
 	
-	unsigned short crc = ((first << 8) & 0xff00) + second;
+	unsigned short crc = (first << 8) + second;
 	unsigned short crc_check = crc16(packet_data, DATA_SIZE);
 	
 	if (crc_check != crc) {
