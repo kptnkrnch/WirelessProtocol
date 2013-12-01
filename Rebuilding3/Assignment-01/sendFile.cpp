@@ -22,7 +22,8 @@
 #include <iostream>
 #include "sendFile.h"
 #include "global.h"
-#include "Terminal.cpp"
+
+extern Stats stats;
 
 using namespace std;
 
