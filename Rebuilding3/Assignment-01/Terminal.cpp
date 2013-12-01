@@ -69,7 +69,8 @@ public:
 	Stats():totalPacketsSent_(0),
 			totalPacketsReceived_(0),
 			totalErrors_(0),
-			totalACKs_(0),
+			totalACKsReceived_(0),
+			totalACKsSent_(0),
 			totalNAKs_(0),
 			totalTimeouts_(0),
 			totalPadding_(0),
@@ -103,7 +104,8 @@ public:
 			return (totalErrors_/(totalPacketsSent_ + totalPacketsReceived_));
 		}
 	}
-	int NumACKs() const { return totalACKs_; }
+	int NumACKsReceived() const { return totalACKsReceived_; }
+	int NumACKsSent() const { return totalACKsSent_; }
 	int NumNAKs() const { return totalNAKs_; }
 	int TotalBitsSent() const { return (1024 * totalPacketsSent_); }
 	int TotalBitsReceived() const { return (1024 * totalPacketsReceived_); }
@@ -149,7 +151,8 @@ private:
 	int totalPacketsSent_;
 	int totalPacketsReceived_;
 	int totalErrors_;
-	int totalACKs_;
+	int totalACKsReceived_;
+	int totalACKsSent_;
 	int totalNAKs_;
 	int totalTimeouts_;
 	int totalPadding_;

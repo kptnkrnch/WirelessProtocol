@@ -22,7 +22,7 @@
 #include <iostream>
 #include "sendFile.h"
 #include "global.h"
-
+#include "Terminal.cpp"
 
 using namespace std;
 
@@ -77,7 +77,7 @@ void send_packets(Globals *global)
 
 	// if starting to send data, enquire line
 	if(!enquire_line(*(global->hComm), *(global->hSem))) {
-		//cerr << "could not enquire line" << endl;
+		cerr << "could not enquire line" << endl;
 		//return;
 	}
 
@@ -85,13 +85,13 @@ void send_packets(Globals *global)
     while(!buffer.is_empty() && packets_sent < 5)
     {
 		// transmit a packet
-		if(!transmit_packet(*(global->hComm), *(global->hSem), buffer.get_packet())) {
+		if(!transmit_packet(*(global->hComm), *(global->hSem), buffer.get_packet())) 
 			cerr << "error sending packet" << endl;
 			//return;
-		}
-
 
 		packets_sent++;
+		stats.NumPacketsSent++;
+
 		buffer.remove_packet();
     }
 
@@ -150,12 +150,12 @@ bool enquire_line(HANDLE& hComm, HANDLE& hSem)
 bool transmit_packet(HANDLE& hComm, HANDLE& hSem, const char* data)
 {
 	DWORD bytes = 0;
-	if (!WriteFile(hComm, data, PACKET_SIZE, &bytes, &ov)) {
+	if (!WriteFile(hComm, data, PACKET_SIZE, &bytes, &ov)) 
+	{
 		int err = GetLastError();
 
-		if (err == ERROR_IO_PENDING) {
+		if (err == ERROR_IO_PENDING)
 			bytes = 1;
-		}
 	}
 	//WriteFile(hComm, packet, 1024, &dwBytesWritten, &ov);
     return wait_for_acknowledgement(hSem);
@@ -187,7 +187,8 @@ bool wait_for_acknowledgement(HANDLE& hSem)
     switch(dwWaitResult)
     {
         // recieved ack
-        case WAIT_OBJECT_0:            
+        case WAIT_OBJECT_0:  
+			stats.NumACKsReceived++;
             return true; 
         // ack not recieved
         case WAIT_ABANDONED: 
