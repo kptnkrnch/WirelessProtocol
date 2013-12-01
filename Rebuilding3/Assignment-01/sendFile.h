@@ -12,7 +12,7 @@
 #define SYN 0x16
 
 #define PACKET_SIZE 1024
-#define TIMEOUT_TIME INFINITE
+#define TIMEOUT_TIME 200
 
 DWORD WINAPI sendBufferThread(LPVOID n);
 void send_packets(Globals*);

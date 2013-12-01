@@ -87,10 +87,11 @@ void send_packets(Globals *global)
 		// transmit a packet
 		if(!transmit_packet(*(global->hComm), *(global->hSem), buffer.get_packet())) 
 			cerr << "error sending packet" << endl;
-			//return;
-
-		packets_sent++;
-		stats.NumPacketsSent++;
+		else
+		{
+			packets_sent++;
+			stats.NumPacketsSent++;
+		}
 
 		buffer.remove_packet();
     }
@@ -182,7 +183,7 @@ bool transmit_packet(HANDLE& hComm, HANDLE& hSem, const char* data)
 bool wait_for_acknowledgement(HANDLE& hSem)
 {
 
-    DWORD dwWaitResult = WaitForSingleObject(hSem, INFINITE);
+    DWORD dwWaitResult = WaitForSingleObject(hSem, TIMEOUT_TIME);
     // wait for ack (return true of ack)
     switch(dwWaitResult)
     {
