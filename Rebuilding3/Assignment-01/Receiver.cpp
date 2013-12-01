@@ -33,7 +33,7 @@ bool flag = false;
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
 
-bool read(HANDLE& hComm, char* c, int bytesToRead) {
+bool read(HANDLE& hComm, char* c, int bytesToRead, bool &timeout) {
 	COMSTAT cs;
         DWORD obj;
 	DWORD errors;
@@ -85,6 +85,7 @@ bool read(HANDLE& hComm, char* c, int bytesToRead) {
 			}
 			if(obj == WAIT_TIMEOUT){
 				stats.totalTimeouts_++;
+				timeout = true;
 			}
 			//}
 		//}
@@ -97,6 +98,7 @@ DWORD WINAPI receiverThread(LPVOID n){
         Globals *globals = (Globals*)n;
         DWORD event;
         char c[2];
+		bool timeout;
 
         DWORD bytesRead = 0;
         
@@ -121,7 +123,7 @@ DWORD WINAPI receiverThread(LPVOID n){
                         }
                 }*/
 
-                if (!read(*(globals->hComm), c, 2))
+                if (!read(*(globals->hComm), c, 2, timeout))
 					continue;
 
                 if(c[0] == SYN && c[1] == ENQ){
@@ -175,29 +177,29 @@ void waitForPackets(HANDLE& hComm, HANDLE& hSem){
                 }*/
 
 
-                if (!read(hComm, c, 2))
-					continue;
+                if (read(hComm, c, 2, timeout)) {
 
-                if (c[0] == SYN) {
-                        if (c[1] == EOT) {
-                                break;
-                        }
-                        else if (c[1] == SOT1 || c[1] == SOT2) {
+					if (c[0] == SYN) {
+							if (c[1] == EOT) {
+									break;
+							}
+							else if (c[1] == SOT1 || c[1] == SOT2) {
 
-                                //if (read(hComm, c + 2, 1022)) {
-									MessageBox(NULL, TEXT("GOT PACKET"), TEXT(""), MB_OK);
-									if(recievePacket(c)){
-											sendControlChar(hComm, ACK);
-									} else{
-											sendControlChar(hComm, NAK);
-									}
-								//}
-                        }
-                }
-                else {
-                        //not a packet.
-                        MessageBox(NULL, TEXT("Recieved something that wasnt a packet."), TEXT(""), MB_OK);
-                }
+									//if (read(hComm, c + 2, 1022)) {
+										MessageBox(NULL, TEXT("GOT PACKET"), TEXT(""), MB_OK);
+										if(recievePacket(c)){
+												sendControlChar(hComm, ACK);
+										} else{
+												sendControlChar(hComm, NAK);
+										}
+									//}
+							}
+					}
+					else {
+							//not a packet.
+							MessageBox(NULL, TEXT("Recieved something that wasnt a packet."), TEXT(""), MB_OK);
+					}
+				}
 
         }while(!timeout);
 
