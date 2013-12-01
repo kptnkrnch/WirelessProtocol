@@ -72,6 +72,7 @@ bool read(HANDLE& hComm, char* c, int bytesToRead) {
 					ReadFile(hComm, c, cs.cbInQue, &br, &ov);
 				} else {
 					ReadFile(hComm, c, 1024, &br, &ov);
+					stats.totalPacketsReceived_++;
 				}
 									//br_total += br;
 									//ReadFile(hComm, c, bytesToRead, &bytesRead, &ov);
@@ -181,7 +182,7 @@ void waitForPackets(HANDLE& hComm, HANDLE& hSem){
                         if (c[1] == EOT) {
                                 break;
                         }
-                        else {
+                        else if (c[1] == SOT1 || c[1] == SOT2) {
 
                                 //if (read(hComm, c + 2, 1022)) {
 									MessageBox(NULL, TEXT("GOT PACKET"), TEXT(""), MB_OK);
