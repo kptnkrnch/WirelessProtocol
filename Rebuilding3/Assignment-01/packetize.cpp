@@ -31,6 +31,7 @@
 #include "Buffer.h"
 #include "crc.h"
 #include "packetize.h"
+#include "global.h"
 
 using namespace std;
 
@@ -38,6 +39,7 @@ int send_control;
 int recv_control = SOT1;
 
 extern Buffer buffer;
+extern Stats stats;
 
 /*------------------------------------------------------------------------------------------------------------------
 -- FUNCTION:		recievePacket
@@ -45,6 +47,8 @@ extern Buffer buffer;
 -- DATE:			November 20, 2013
 --
 -- REVISIONS:		November 25, 2013		Fixed CRC calculation error.
+--					December 1, 2013		Fixed CRC calculation error by masking the CRC characters with 0xff. Added
+--											stats tracking.
 --
 -- DESIGNER:		Jordan Marling
 --
@@ -85,6 +89,7 @@ bool recievePacket(char data[]) {
 	
 	if (crc_check != crc) {
 		cerr << "CRC fail. Got " << hex << setw(4) << setfill('0') << crc << " and expected " << crc16(packet_data, DATA_SIZE) << endl;
+		stats.totalErrors_++;
 		return false;
 	}
 	
@@ -93,10 +98,11 @@ bool recievePacket(char data[]) {
 	for(int i = 0; i < DATA_SIZE; i++) {
 		if (packet_data[i] != (char)0) {
 			last_char = i;
-			cout << packet_data[i];
 		}
 	}
 	
+	stats.usefulBitsReceived_ += last_char;
+
 	if (last_char < DATA_SIZE - 1) {
 		packet_data[last_char] = '\0';
 	}
@@ -109,7 +115,7 @@ bool recievePacket(char data[]) {
 --
 -- DATE:			November 20, 2013
 --
--- REVISIONS:		
+-- REVISIONS:		December 1, 2013		Added stats tracking.
 --
 -- DESIGNER:		Jordan Marling
 --
@@ -133,7 +139,7 @@ void readFile(fstream &is) {
 	
 	while ((tmp = is.get()) >= 0) {
 		
-		data[count++] = (unsigned char)tmp;
+		data[count++] = (char)tmp;
 		
 		if (count >= DATA_SIZE) {
 			packetize(data);
@@ -142,9 +148,11 @@ void readFile(fstream &is) {
 		
 	}
 	
+	stats.totalPadding_ += DATA_SIZE - count;
+
 	for(;count < DATA_SIZE; count++) {
 		
-		data[count] = (unsigned char)0;
+		data[count] = (char)0;
 		
 	}
 	
@@ -158,6 +166,8 @@ void readFile(fstream &is) {
 -- DATE:			November 18, 2013
 --
 -- REVISIONS:		November 25, 2013		Fixed CRC calculation error.
+--					December 1, 2013		Added stats tracking. Changed CRC algorithm to match rest of groups using
+--											protocol.
 --
 -- DESIGNER:		Jordan Marling
 --

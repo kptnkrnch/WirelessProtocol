@@ -30,16 +30,17 @@
 
 #include <windows.h>
 #include <stdio.h>
-#include "winmenu2.h"
 #include <string>
-#include "global.h"
 #include <fstream>
 #include <vector>
 #include <sstream>
 
+#include "global.h"
 #include "sendFile.h"
 #include "packetize.h"
 #include "Receiver.h"
+#include "Terminal.h"
+#include "winmenu2.h"
 
 
 TCHAR Name[] = TEXT("Comm Shell");
@@ -70,28 +71,6 @@ RECT topleft;
 RECT topright;
 RECT bottomleft;
 RECT bottomright;
-
-void DisplayStatistics(const RECT& rect, const Stats& stats, HDC& hdc);
-void DisplayReceivedFileData(const RECT& rect, std::vector<std::string> FileContents, HDC& hdc);
-
-void DisplayElapsedTime(int time, HDC& hdc, int x, int& y);
-void DisplaySendProtocolEfficiency(double eff, HDC& hdc, int x, int& y);
-void DisplayReceiveProtocolEfficiency(double eff, HDC& hdc, int x, int& y);
-void DisplayEffectiveSendBPS(int bps, HDC& hdc, int x, int& y);
-void DisplayEffectiveReceiveBPS(int bps, HDC& hdc, int x, int& y);
-void DisplayNumPacketsSent(int count, HDC& hdc, int x, int& y);
-void DisplayBitErrorRate(int count, HDC& hdc, int x, int& y);
-void DisplayNumACKs(int count, HDC& hdc, int x, int& y);
-void DisplayNumNAKs(int count, HDC& hdc, int x, int& y);
-void DisplayTotalBitsSent(int count, HDC& hdc, int x, int& y);
-void DisplayTotalBitsReceived(int count, HDC& hdc, int x, int& y);
-void DisplayResponseTime(int time, HDC& hdc, int x, int& y);
-void DisplayTotalTimeouts(int count, HDC& hdc, int x, int& y);
-void DisplayTotalRequests(int count, HDC& hdc, int x, int& y);
-void DisplayAverageSendPadding(int count, HDC& hdc, int x, int& y);
-void DisplayAverageReceivePadding(int count, HDC& hdc, int x, int& y);
-void DisplayPacketsSentPerSecond(int pps, HDC& hdc, int x, int& y);
-void DisplayPacketsReceivedPerSecond(int pps, HDC& hdc, int x, int& y);
 
 //DWORD WINAPI OutputThread(LPVOID);
 std::fstream OpenFile(std::string FileLocation) {

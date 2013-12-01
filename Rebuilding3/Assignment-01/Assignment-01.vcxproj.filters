@@ -58,5 +58,8 @@
     <ClInclude Include="sendFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Terminal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
