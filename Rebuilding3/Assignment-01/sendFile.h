@@ -8,7 +8,7 @@
 #include "global.h"
 
 #define PACKET_SIZE 1024
-#define TIMEOUT_TIME 200
+#define TIMEOUT_TIME 600
 
 DWORD WINAPI sendBufferThread(LPVOID n);
 void send_packets(Globals*);

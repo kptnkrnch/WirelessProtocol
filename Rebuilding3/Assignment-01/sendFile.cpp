@@ -1,11 +1,14 @@
 /*------------------------------------------------------------------------------------------------------------------
--- SOURCE FILE: 
+-- SOURCE FILE: sendFile.cpp
 --
 -- PROGRAM: 
 --
--- FUNCTIONS:
--- 
---
+-- FUNCTIONS: DWORD WINAPI sendBufferThread(LPVOID n);
+--			  void send_packets(Globals*);
+--			  bool enquire_line(Globals*);
+--			  bool transmit_packet(Globals*, const char*);
+--			  bool wait_for_acknowledgement(Globals*);
+--			  void sendControlChar(HANDLE& hComm, char);
 --
 -- DATE: 11.21.13
 --
@@ -36,7 +39,7 @@ extern Stats stats;
 --
 -- DATE: 11.29.13
 --
--- REVISIONS: 
+-- REVISIONS: (Date and Description)
 --
 -- DESIGNER: Damien Sathanielle
 --
@@ -136,7 +139,8 @@ void send_packets(Globals *global)
 --
 -- PROGRAMMER: Damien Sathanielle
 --
--- INTERFACE: bool enquire_line();
+-- INTERFACE: bool enquire_line() (old)
+--            bool enquire_line(Globals *globals)
 --
 -- RETURNS: bool.
 --
@@ -164,7 +168,8 @@ bool enquire_line(Globals *globals)
 --
 -- PROGRAMMER: Damien Sathanielle
 --
--- INTERFACE: bool transmit_packet(char* data);
+-- INTERFACE: bool transmit_packet(char* data) (old)
+--            bool transmit_packet(Globals * globals, const char* data)
 --
 -- RETURNS: bool.
 --
@@ -175,7 +180,6 @@ bool transmit_packet(Globals * globals, const char* data)
 {
 	DWORD bytes = 0;
 	WriteFile(globals->hComm, data, PACKET_SIZE, &bytes, &ov);
-	//WriteFile(hComm, packet, 1024, &dwBytesWritten, &ov);
     return wait_for_acknowledgement(globals);
 }
 
@@ -185,12 +189,14 @@ bool transmit_packet(Globals * globals, const char* data)
 -- DATE: 11.21.13
 --
 -- REVISIONS: 11.26.13 - added WaitForSingleObject
+--					   - handle naks
 --
 -- DESIGNER: Damien Sathanielle
 --
 -- PROGRAMMER: Damien Sathanielle
 --
--- INTERFACE: bool wait_for_acknowledgement();
+-- INTERFACE: bool wait_for_acknowledgement() (old)
+--            bool wait_for_acknowledgement(Globals *globals)
 --
 -- RETURNS: bool.
 --
@@ -204,11 +210,11 @@ bool wait_for_acknowledgement(Globals *globals)
     // wait for ack (return true of ack)
     switch(dwWaitResult)
     {
-        // recieved ack
         case WAIT_OBJECT_0:  
 			stats.totalNAKsReceived_++;
+			// returns true if ack and false if nak
 			return globals->gotAck; 
-        // ack not recieved
+        // nothing received
         case WAIT_ABANDONED: 
             return false;  
     }
@@ -230,7 +236,7 @@ bool wait_for_acknowledgement(Globals *globals)
 --
 -- RETURNS: void.
 --
--- NOTES: packetize and sents end of transmition
+-- NOTES: sends a controll character
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
 void sendControlChar(HANDLE& hComm, char control)
