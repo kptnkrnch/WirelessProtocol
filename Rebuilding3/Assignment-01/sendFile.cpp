@@ -184,7 +184,7 @@ bool enquire_line(Globals *globals)
 bool transmit_packet(Globals * globals, const char* data)
 {
 	DWORD bytes = 0;
-	WriteFile(globals->hComm, data, PACKET_SIZE, &bytes, &ov);
+	WriteFile(*globals->hComm, data, PACKET_SIZE, &bytes, &ov);
     return wait_for_acknowledgement(globals);
 }
 
@@ -211,7 +211,7 @@ bool transmit_packet(Globals * globals, const char* data)
 bool wait_for_acknowledgement(Globals *globals)
 {
 
-	DWORD dwWaitResult = WaitForSingleObject(globals->hSem, TIMEOUT_TIME);
+	DWORD dwWaitResult = WaitForSingleObject(*globals->hSem, TIMEOUT_TIME);
     // wait for ack (return true of ack)
     switch(dwWaitResult)
     {
