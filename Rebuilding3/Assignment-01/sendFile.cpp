@@ -98,7 +98,7 @@ void send_packets(Globals *global)
 	int packets_sent = 0;
 
 	// if starting to send data, enquire line
-	if(!enquire_line(*(global->hComm), *(global->hSem))) 
+	if(!enquire_line(global)) 
 	{
 		cerr << "could not enquire line" << endl;
 		//return;
@@ -108,7 +108,7 @@ void send_packets(Globals *global)
     while(!buffer.is_empty() && packets_sent < 5)
     {
 		// transmit a packet
-		if (!transmit_packet(*(global->hComm), *(global->hSem), buffer.get_packet()))
+		if (!transmit_packet(global, buffer.get_packet()))
 		{
 			cerr << "error sending packet" << endl;
 			break;
@@ -144,13 +144,13 @@ void send_packets(Globals *global)
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
 
-bool enquire_line(HANDLE& hComm, HANDLE& hSem)
+bool enquire_line(Globals *globals)
 {
     // send enq
-    sendControlChar(hComm, ENQ);
+    sendControlChar(*globals->hComm, ENQ);
 
     // wait for reciever to acknowledge line is free
-    return wait_for_acknowledgement(hSem);
+    return wait_for_acknowledgement(globals);
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -171,18 +171,12 @@ bool enquire_line(HANDLE& hComm, HANDLE& hSem)
 -- NOTES: Writes a packet to serial port
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
-bool transmit_packet(HANDLE& hComm, HANDLE& hSem, const char* data)
+bool transmit_packet(Globals * globals, const char* data)
 {
 	DWORD bytes = 0;
-	if (!WriteFile(hComm, data, PACKET_SIZE, &bytes, &ov)) 
-	{
-		int err = GetLastError();
-
-		if (err == ERROR_IO_PENDING)
-			bytes = 1;
-	}
+	WriteFile(globals->hComm, data, PACKET_SIZE, &bytes, &ov);
 	//WriteFile(hComm, packet, 1024, &dwBytesWritten, &ov);
-    return wait_for_acknowledgement(hSem);
+    return wait_for_acknowledgement(globals);
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -203,17 +197,17 @@ bool transmit_packet(HANDLE& hComm, HANDLE& hSem, const char* data)
 -- NOTES: waits for an acknowledgement event from recieve function and returns true if an ACK was recieved
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
-bool wait_for_acknowledgement(HANDLE& hSem)
+bool wait_for_acknowledgement(Globals *globals)
 {
 
-    DWORD dwWaitResult = WaitForSingleObject(hSem, TIMEOUT_TIME);
+	DWORD dwWaitResult = WaitForSingleObject(globals->hSem, TIMEOUT_TIME);
     // wait for ack (return true of ack)
     switch(dwWaitResult)
     {
         // recieved ack
         case WAIT_OBJECT_0:  
 			stats.totalNAKsReceived_++;
-            return true; 
+			return globals->gotAck; 
         // ack not recieved
         case WAIT_ABANDONED: 
             return false;  

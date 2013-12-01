@@ -134,10 +134,13 @@ DWORD WINAPI receiverThread(LPVOID n){
                 }
                 if(c[0] == SYN && c[1] == ACK){
                         //MessageBox(NULL, TEXT("GOT ACK"), TEXT(""), MB_OK);
+					globals->gotAck = true;
                         ReleaseSemaphore(*(globals->hSem), 1, NULL);
                         stats.totalACKsReceived_++;
                 }
                 if(c[0] == SYN && c[1] == NAK){
+					globals->gotAck = false;
+                        ReleaseSemaphore(*(globals->hSem), 1, NULL);
                 	stats.totalNAKsReceived_++;
                 }
         }

@@ -12,9 +12,9 @@
 
 DWORD WINAPI sendBufferThread(LPVOID n);
 void send_packets(Globals*);
-bool enquire_line(HANDLE&, HANDLE&);
-bool transmit_packet(HANDLE&, HANDLE&, const char*);
-bool wait_for_acknowledgement(HANDLE&);
+bool enquire_line(Globals*);
+bool transmit_packet(Globals*, const char*);
+bool wait_for_acknowledgement(Globals*);
 void sendControlChar(HANDLE& hComm, char);
 
 #endif

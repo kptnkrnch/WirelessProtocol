@@ -118,6 +118,9 @@ typedef struct Globals {
 	HANDLE* hSem;
 	HANDLE* hComm;
 	OVERLAPPED ov;
+
+	bool gotAck;
+
 } Globals;
 
 #endif
