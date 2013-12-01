@@ -44,9 +44,9 @@ extern Stats stats;
 --
 -- INTERFACE: DWORD WINAPI sendBufferThread(LPVOID n);
 --
--- RETURNS: void.
+-- RETURNS:
 --
--- NOTES: 
+-- NOTES: Continuously checks buffer for packets to send
 --
 ----------------------------------------------------------------------------------------------------------------------*/
 DWORD WINAPI sendBufferThread(LPVOID n)
@@ -56,7 +56,8 @@ DWORD WINAPI sendBufferThread(LPVOID n)
 	dwBytesWritten = 0;
 
 	//infinitely wait for the buffer to have at least one packet.
-	while (!buffer.is_empty()) {
+	while (!buffer.is_empty()) 
+	{
 
 		send_packets(global);
 		Sleep(200);
@@ -75,7 +76,7 @@ DWORD WINAPI sendBufferThread(LPVOID n)
 --            11.26.13 - added semaphores and error checking
 --            11.27.13 - added buffer and fix ENQ/EOT sending
 --            11.28.13 - put in while loop
---            11.30.13 - change name to send_packets and interface
+--            11.30.13 - change name to send_packets and interface; implement global
 --
 -- DESIGNER: Damien Sathanielle
 --
@@ -110,18 +111,16 @@ void send_packets(Globals *global)
 		if(!transmit_packet(*(global->hComm), *(global->hSem), buffer.get_packet())) 
 			cerr << "error sending packet" << endl;
 		else
-		{
+		{   // if packet sent success, increment packets send and update stats
 			packets_sent++;
 			stats.totalPacketsSent_++;
+			buffer.remove_packet();
 		}
-
-		buffer.remove_packet();
     }
 
     // send end of transmition
     sendControlChar(*(global->hComm), EOT);
-
-    ReleaseSemaphore(*(global->hSem), 1, NULL);
+	ReleaseSemaphore(*(global->hSem), 1, NULL);
 }
 
 /*------------------------------------------------------------------------------------------------------------------
