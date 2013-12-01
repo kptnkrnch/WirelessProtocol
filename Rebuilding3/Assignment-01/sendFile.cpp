@@ -108,9 +108,11 @@ void send_packets(Globals *global)
     while(!buffer.is_empty() && packets_sent < 5)
     {
 		// transmit a packet
-		if(!transmit_packet(*(global->hComm), *(global->hSem), buffer.get_packet())) 
+		if (!transmit_packet(*(global->hComm), *(global->hSem), buffer.get_packet()))
+		{
 			cerr << "error sending packet" << endl;
-		else
+			break;
+		}else
 		{   // if packet sent success, increment packets send and update stats
 			packets_sent++;
 			stats.totalPacketsSent_++;
