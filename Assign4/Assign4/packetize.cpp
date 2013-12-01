@@ -76,8 +76,8 @@ bool recievePacket(char data[]) {
 	char *packet_data = &data[2];
 	short first, second;
 	
-	first = (unsigned short)data[PACKET_SIZE - 2];
-	second = (unsigned short)data[PACKET_SIZE - 1];
+	first = (unsigned short)data[PACKET_SIZE - 2] & 0xff;
+	second = (unsigned short)data[PACKET_SIZE - 1] & 0xff;
 	
 	
 	unsigned short crc = ((first << 8) & 0xff00) + second;
