@@ -8,6 +8,30 @@ extern OVERLAPPED ov;
 DWORD bytesRead = 0;
 bool flag = false;
 
+/*------------------------------------------------------------------------------------------------------------------
+-- FUNCTION: read
+--
+-- DATE: 11.21.13
+--
+-- REVISIONS: 11.27.13 - changed to use overlapped struct
+--            11.27.13 - changed to return a bool rather than void
+--            11.28.13 - change to read in all bytes rather than one byte at a time
+--
+-- DESIGNER: Cory Thomas
+--
+-- PROGRAMMER: Cory Thomas
+--
+-- INTERFACE: bool read(HANDLE&, char*, int);
+--
+-- RETURNS: bool
+--
+-- NOTES: read() will be called whenever somehting needs to be read form the comm port. The function will wait till data
+-- 	  comes in through the comm port and then store the data into a char array. If the data if properly read, the 
+--        function will return true. The function will return false if an incorrect number of bytes came through the 
+--        comm port.
+-- 
+----------------------------------------------------------------------------------------------------------------------*/
+
 bool read(HANDLE& hComm, char* c, int bytesToRead) {
 		COMSTAT cs;
         DWORD obj;
