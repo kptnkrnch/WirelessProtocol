@@ -91,7 +91,7 @@ void send_packets(Globals *global)
 		else
 		{
 			packets_sent++;
-			stats.NumPacketsSent++;
+			stats.totalPacketsSent_++;
 		}
 
 		buffer.remove_packet();
@@ -190,7 +190,7 @@ bool wait_for_acknowledgement(HANDLE& hSem)
     {
         // recieved ack
         case WAIT_OBJECT_0:  
-			stats.NumACKsReceived++;
+			stats.totalNAKsReceived_++;
             return true; 
         // ack not recieved
         case WAIT_ABANDONED: 

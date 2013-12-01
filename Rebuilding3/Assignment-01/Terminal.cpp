@@ -484,8 +484,8 @@ void DisplayStatistics(const RECT& rect, const Stats& stats, HDC& hdc) {
 	DisplayEffectiveReceiveBPS(stats.EffectiveReceiveBPS(), hdc, xpos, ypos);
 	DisplayNumPacketsSent(stats.NumPacketsSent(), hdc, xpos, ypos);
 	DisplayBitErrorRate(stats.BitErrorRate(), hdc, xpos, ypos);
-	DisplayNumACKs(stats.NumACKs(), hdc, xpos, ypos);
-	DisplayNumNAKs(stats.NumNAKs(), hdc, xpos, ypos);
+	//DisplayNumACKs(stats.NumACKs(), hdc, xpos, ypos);
+	//DisplayNumNAKs(stats.NumNAKs(), hdc, xpos, ypos);
 	DisplayTotalBitsSent(stats.TotalBitsSent(), hdc, xpos, ypos);
 	DisplayTotalBitsReceived(stats.TotalBitsReceived(), hdc, xpos, ypos);
 	DisplayResponseTime(stats.ResponseTime(), hdc, xpos, ypos);

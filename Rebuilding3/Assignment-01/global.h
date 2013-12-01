@@ -55,8 +55,8 @@ public:
 	}
 	int NumACKsReceived() const { return totalACKsReceived_; }
 	int NumACKsSent() const { return totalACKsSent_; }
-	int NumACKsReceived() const { return totalNAKsReceived_; }
-	int NumACKsSent() const { return totalNAKsSent_; }
+	int NumNAKsReceived() const { return totalNAKsReceived_; }
+	int NumNAKsSent() const { return totalNAKsSent_; }
 	int TotalBitsSent() const { return (1024 * totalPacketsSent_); }
 	int TotalBitsReceived() const { return (1024 * totalPacketsReceived_); }
 	int ResponseTime() const { 

@@ -134,7 +134,7 @@ DWORD WINAPI receiverThread(LPVOID n){
                         ReleaseSemaphore(*(globals->hSem), 1, NULL);
                         stats.totalACKsReceived_++;
                 }
-                if(c[0]) == SYN && c[1] == NAK){
+                if(c[0] == SYN && c[1] == NAK){
                 	stats.totalNAKsReceived_++;
                 }
         }
