@@ -96,6 +96,7 @@ DWORD WINAPI sendBufferThread(LPVOID n)
 void send_packets(Globals *global)
 {
 	int packets_sent = 0;
+	int packet_failure = 0;
 
 	// if starting to send data, enquire line
 	if(!enquire_line(global)) 
@@ -110,12 +111,16 @@ void send_packets(Globals *global)
 		// transmit a packet
 		if (!transmit_packet(global, buffer.get_packet()))
 		{
+			packet_failure++;
 			cerr << "error sending packet" << endl;
-			break;
+			if (packet_failure >= 5) {
+				break;
+			}
 		}else
 		{   // if packet sent success, increment packets send and update stats
 			packets_sent++;
 			stats.totalPacketsSent_++;
+			packet_failure = 0;
 			buffer.remove_packet();
 		}
     }
