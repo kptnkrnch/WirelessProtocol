@@ -19,7 +19,7 @@ bool flag = false;
 --
 -- DESIGNER: Cory Thomas
 --
--- PROGRAMMER: Cory Thomas
+-- PROGRAMMERS: Cory Thomas, Joshua Campbell, Jordan Marling
 --
 -- INTERFACE: bool read(HANDLE&, char*, int);
 --
