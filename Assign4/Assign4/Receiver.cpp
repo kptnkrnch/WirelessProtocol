@@ -8,7 +8,7 @@ OVERLAPPED ov;
 DWORD bytesRead = 0;
 bool flag = false;
 
-void read(HANDLE hComm, char* c, int bytesToRead) {
+bool read(HANDLE hComm, char* c, int bytesToRead) {
 		COMSTAT cs;
         DWORD obj;
 		DWORD errors;
@@ -20,12 +20,14 @@ void read(HANDLE hComm, char* c, int bytesToRead) {
 		bool complete = false;
 
 		//while (!complete) {
-			wait = WaitCommEvent(hComm, &ev, NULL);
-			//obj = WaitForSingleObject(ov.hEvent, INFINITE);
-			if (wait) {
-				ClearCommError(hComm, &errors, &cs);
-			//if (obj == WAIT_OBJECT_0 && event & EV_RXCHAR) {
-				if ((ev & EV_RXCHAR) && cs.cbInQue) {
+			wait = WaitCommEvent(hComm, &ev, &ov);
+			if (wait)
+				return false;
+			obj = WaitForSingleObject(ov.hEvent, INFINITE);
+			//if (wait) {
+			ClearCommError(hComm, &errors, &cs);
+			if (obj == WAIT_OBJECT_0 && ev & EV_RXCHAR && cs.cbInQue) {
+				//if ((ev & EV_RXCHAR) && cs.cbInQue) {
                 
                 
 						//if (GetOverlappedResult(hComm, &ov, &bytesTransferred, TRUE)) {
@@ -49,11 +51,13 @@ void read(HANDLE hComm, char* c, int bytesToRead) {
 								//} while (br_total < bytesToRead);
 
 						//}
+					return true;
 				}
-			}
+			//}
 		//}
 
         //ResetEvent(ov.hEvent);
+			return false;
 }
 
 DWORD WINAPI receiverThread(LPVOID n){
@@ -73,6 +77,8 @@ DWORD WINAPI receiverThread(LPVOID n){
         SetCommMask(globals->hComm, EV_RXCHAR | EV_TXEMPTY);
 
         while(1){
+			c[0] = 0;
+			c[1] = 0;
                 //WaitForSingleObject(globals->hSem, 0);
                 /*WaitCommEvent(globals->hComm, &event, &ov);
                 WaitForSingleObject(ov.hEvent, INFINITE);
@@ -89,7 +95,9 @@ DWORD WINAPI receiverThread(LPVOID n){
                         }
                 }*/
 
-                read(globals->hComm, c, 2);
+                if (!read(globals->hComm, c, 2))
+					continue;
+
                 if(c[0] == SYN && c[1] == ENQ){
                         MessageBox(NULL, TEXT("GOT ENQ"), TEXT(""), MB_OK);
                         sendControlChar(globals->hComm, ACK);
@@ -105,7 +113,7 @@ DWORD WINAPI receiverThread(LPVOID n){
 
 void waitForPackets(HANDLE hComm, HANDLE hSem){
         bool timeout = false;
-        char c[1024];
+		char c[1024] = {0};
         DWORD obj;
         DWORD event;
 
@@ -136,20 +144,23 @@ void waitForPackets(HANDLE hComm, HANDLE hSem){
                 }*/
 
 
-                read(hComm, c, 2);
+                if (!read(hComm, c, 2))
+					continue;
+
                 if (c[0] == SYN) {
                         if (c[1] == EOT) {
                                 break;
                         }
                         else {
 
-                                read(hComm, c + 2, 1022);
-                                MessageBox(NULL, TEXT("GOT PACKET"), TEXT(""), MB_OK);
-                                if(recievePacket(c)){
-                                        sendControlChar(hComm, ACK);
-                                } else{
-                                        sendControlChar(hComm, NAK);
-                                }
+                                if (read(hComm, c + 2, 1022)) {
+									MessageBox(NULL, TEXT("GOT PACKET"), TEXT(""), MB_OK);
+									if(recievePacket(c)){
+											sendControlChar(hComm, ACK);
+									} else{
+											sendControlChar(hComm, NAK);
+									}
+								}
                         }
                 }
                 else {
