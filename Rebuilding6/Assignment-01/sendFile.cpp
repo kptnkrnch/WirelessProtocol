@@ -25,6 +25,7 @@
 #include <iostream>
 #include "sendFile.h"
 #include "global.h"
+#include "Terminal.h"
 
 using namespace std;
 
@@ -32,8 +33,9 @@ DWORD  dwBytesWritten;
 Buffer buffer;
 
 extern OVERLAPPED ov;
-extern CRITICAL_SECTION section;
+extern HANDLE semm;
 extern Stats stats;
+extern int send_control;
 
 /*------------------------------------------------------------------------------------------------------------------
 -- FUNCTION: sendBufferThread
@@ -58,13 +60,13 @@ DWORD WINAPI sendBufferThread(LPVOID n)
 
 	Globals* global = (Globals*)n;
 	dwBytesWritten = 0;
+	*(global->hSem) = CreateSemaphore(NULL, 0, 1, NULL);
 
 	//infinitely wait for the buffer to have at least one packet.
 	while (!buffer.is_empty()) 
 	{
-
 		send_packets(global);
-		Sleep(200);
+		Sleep(600 + (rand() % 600));
 	}
 
 	return 0;
@@ -106,33 +108,37 @@ void send_packets(Globals *global)
 	if(!enquire_line(global)) 
 	{
 		cerr << "could not enquire line" << endl;
-		//return;
+		return;
 	}
 
-    // loop through all the data 
-    while(!buffer.is_empty() && packets_sent < 41)
-    {
+	// loop through all the data 
+	while(!buffer.is_empty() && packets_sent < 5)
+	{
 		// transmit a packet
 		if (!transmit_packet(global, buffer.get_packet()))
 		{
+			//MessageBox(NULL, TEXT("ERROR SENDING"), TEXT(""), MB_OK);
 			packet_failure++;
 			cerr << "error sending packet" << endl;
-			if (packet_failure >= 41) {
-				break;
+			if (packet_failure >= 5) {
+				return;
 			}
 		}else
 		{   // if packet sent success, increment packets send and update stats
+			//MessageBox(NULL, TEXT("Packet Sent"), TEXT(""), MB_OK);
+			send_control = send_control == SOT1 ? SOT2 : SOT1;
 			packets_sent++;
-//			stats.totalPacketsSent_++;
-			HandleStats(section, stats, 1, 1);
+			stats.totalPacketsSent_++;
+			UpdateStats();
 			packet_failure = 0;
 			buffer.remove_packet();
 		}
-    }
+	}
 
-    // send end of transmition
-    sendControlChar(*(global->hComm), EOT);
-	ReleaseSemaphore(*(global->hSem), 1, NULL);
+	// send end of transmition
+	//MessageBox(NULL, TEXT("Sending EOT"), TEXT(""), MB_OK);
+	sendControlChar(global->hComm, EOT);
+	//ReleaseSemaphore(*(global->hSem), 1, NULL);
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -157,11 +163,13 @@ void send_packets(Globals *global)
 
 bool enquire_line(Globals *globals)
 {
-    // send enq
-    sendControlChar(*globals->hComm, ENQ);
+	// send enq
+	//MessageBox(NULL, TEXT("Sending ENQ"), TEXT(""), MB_OK);
+	sendControlChar(globals->hComm, ENQ);
+	send_control = SOT1;
 
-    // wait for reciever to acknowledge line is free
-    return wait_for_acknowledgement(globals);
+	// wait for reciever to acknowledge line is free
+	return wait_for_acknowledgement(globals);
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -183,11 +191,16 @@ bool enquire_line(Globals *globals)
 -- NOTES: Writes a packet to serial port
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
-bool transmit_packet(Globals * globals, const char* data)
+bool transmit_packet(Globals * globals, char* data)
 {
+	//MessageBox(NULL, TEXT("Sending packet"), TEXT(""), MB_OK);
 	DWORD bytes = 0;
-	WriteFile(*globals->hComm, data, PACKET_SIZE, &bytes, &ov);
-    return wait_for_acknowledgement(globals);
+
+	data[1] = send_control;
+	//send_control = send_control == SOT1 ? SOT2 : SOT1;
+	
+	WriteFile(*(globals->hComm), data, PACKET_SIZE, &bytes, &ov);
+	return wait_for_acknowledgement(globals);
 }
 
 /*------------------------------------------------------------------------------------------------------------------
@@ -212,20 +225,22 @@ bool transmit_packet(Globals * globals, const char* data)
 ----------------------------------------------------------------------------------------------------------------------*/
 bool wait_for_acknowledgement(Globals *globals)
 {
-
-	DWORD dwWaitResult = WaitForSingleObject(*globals->hSem, TIMEOUT_TIME);
-    // wait for ack (return true of ack)
-    switch(dwWaitResult)
-    {
-        case WAIT_OBJECT_0:  
-//			stats.totalNAKsReceived_++;
-			HandleStats(section, stats, 0, 1);
-			// returns true if ack and false if nak
-			return globals->gotAck; 
-        // nothing received
-        case WAIT_ABANDONED: 
-            return false;  
-    }
+	//MessageBox(NULL, TEXT("WAIT"), TEXT(""), MB_OK);
+	DWORD dwWaitResult = WaitForSingleObject(*(globals->hSem), TIMEOUT_TIME);
+	// wait for ack (return true of ack)
+	switch(dwWaitResult)
+	{
+	case WAIT_OBJECT_0:  
+		//MessageBox(NULL, TEXT("GOT ACK"), TEXT(""), MB_OK);
+		//stats.totalNAKsReceived_++;
+		//UpdateStats();
+		
+		// returns true if ack and false if nak
+		return globals->gotAck; 
+		// nothing received
+	case WAIT_ABANDONED: 
+		return false;  
+	}
 
 	return false;
 }
@@ -247,10 +262,10 @@ bool wait_for_acknowledgement(Globals *globals)
 -- NOTES: sends a controll character
 -- 
 ----------------------------------------------------------------------------------------------------------------------*/
-void sendControlChar(HANDLE& hComm, char control)
+void sendControlChar(HANDLE *hComm, char control)
 {
-    char c[2];
-    c[0] = SYN;
-    c[1] = control;
-    WriteFile(hComm, c, 2, &dwBytesWritten, &ov);
+	char c[2];
+	c[0] = SYN;
+	c[1] = control;
+	WriteFile(*hComm, c, 2, &dwBytesWritten, &ov);
 }

@@ -32,6 +32,7 @@
 
 extern OVERLAPPED ov;
 extern Stats stats;
+extern CRITICAL_SECTION section;
 DWORD bytesRead = 0;
 bool flag = false;
 
@@ -99,7 +100,8 @@ bool read(HANDLE& hComm, char* c, int bytesToRead, bool &timeout) {
 					ReadFile(hComm, c, cs.cbInQue, &br, &ov);
 				} else {
 					ReadFile(hComm, c, 1024, &br, &ov);
-					stats.totalPacketsReceived_++;
+//					stats.totalPacketsReceived_++;
+					HandleStats(section, stats, 2, 1);
 				}
 									//br_total += br;
 									//ReadFile(hComm, c, bytesToRead, &bytesRead, &ov);
@@ -111,7 +113,8 @@ bool read(HANDLE& hComm, char* c, int bytesToRead, bool &timeout) {
 				return true;
 			}
 			if(obj == WAIT_TIMEOUT){
-				stats.totalTimeouts_++;
+//				stats.totalTimeouts_++;
+				HandleStats(section, stats, 8, 1);
 				timeout = true;
 			}
 			//}
@@ -179,18 +182,21 @@ DWORD WINAPI receiverThread(LPVOID n){
                         //MessageBox(NULL, TEXT("GOT ENQ"), TEXT(""), MB_OK);
                         sendControlChar(*(globals->hComm), ACK);
                         waitForPackets(*(globals->hComm), *(globals->hSem));
-                        stats.totalRequests_++;
+                        //stats.totalRequests_++;
+						HandleStats(section, stats, 10, 1);
                 }
                 if(c[0] == SYN && c[1] == ACK){
                         //MessageBox(NULL, TEXT("GOT ACK"), TEXT(""), MB_OK);
 					globals->gotAck = true;
                         ReleaseSemaphore(*(globals->hSem), 1, NULL);
-                        stats.totalACKsReceived_++;
+                        //stats.totalACKsReceived_++;
+						HandleStats(section, stats, 4, 1);
                 }
                 if(c[0] == SYN && c[1] == NAK){
 					globals->gotAck = false;
                         ReleaseSemaphore(*(globals->hSem), 1, NULL);
-                	stats.totalNAKsReceived_++;
+                	//stats.totalNAKsReceived_++;
+						HandleStats(section, stats, 6, 1);
                 }
         }
         return 0;
@@ -258,7 +264,7 @@ void waitForPackets(HANDLE& hComm, HANDLE& hSem){
 							else if (c[1] == SOT1 || c[1] == SOT2) {
 
 									//if (read(hComm, c + 2, 1022)) {
-										MessageBox(NULL, TEXT("GOT PACKET"), TEXT(""), MB_OK);
+										//MessageBox(NULL, TEXT("GOT PACKET"), TEXT(""), MB_OK);
 										if(recievePacket(c)){
 												sendControlChar(hComm, ACK);
 										} else{

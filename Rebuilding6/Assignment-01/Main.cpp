@@ -1,254 +1,167 @@
-/*------------------------------------------------------------------------------------------------------------------
--- SOURCE FILE: Terminal.cpp - An application that establishes a connection via a computer's
--- serial port and then sends and receives text input.
---
--- PROGRAM: Dumb Terminal
---
--- FUNCTIONS:
--- int WINAPI WinMain (HINSTANCE hInst, HINSTANCE hprevInstance, LPSTR lspszCmdParam, int nCmdShow)
--- LRESULT CALLBACK WndProc (HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
--- DWORD WINAPI OutputThread(LPVOID n)
---
---
--- DATE: September 29, 2013
---
--- REVISIONS: None
---
--- DESIGNER: Joshua Campbell
---
--- PROGRAMMER: Joshua Campbell
---
--- NOTES:
--- The program will require the user to correctly configure the port settings.
--- In order to initiate a connection, a user will have to configure the port and then select the "connect"
--- option from the "Options" menu.
--- You cannot open more than one port at a time. You will have to select the "disconnect" first before
--- opening a different port.
-----------------------------------------------------------------------------------------------------------------------*/
-
 #define STRICT
 
 #include <windows.h>
 #include <stdio.h>
+#include "winmenu2.h"
 #include <string>
 #include <fstream>
 #include <vector>
 #include <sstream>
 
-#include "global.h"
 #include "sendFile.h"
 #include "packetize.h"
 #include "Receiver.h"
-#include "Terminal.h"
-#include "winmenu2.h"
+#include "global.h"
 
+class Stats {
+public:
+	Stats():totalPacketsSent_(0),
+			totalPacketsReceived_(0),
+			totalErrors_(0),
+			totalACKs_(0),
+			totalNAKs_(0),
+			totalTimeouts_(0),
+			totalPadding_(0),
+			totalRequests_(0),
+			elapsedTime_(0),
+			usefulBitsSent_(0),
+			usefulBitsReceived_(0),
+			totalResponseTime_(0) {}
 
-TCHAR Name[] = TEXT("Comm Shell");
+	double SendProtocolEfficiency() const { 
+		if (((((totalPacketsSent_ * (1024 - 48)) - totalPadding_)) == 0) || (totalPacketsSent_ * 1024) == 0) {
+			return 0;
+		} else {
+			return ( ((double)((totalPacketsSent_ * (1024 - 48)) - totalPadding_)) / (totalPacketsSent_ * 1024) );
+		}
+	}
+	double ReceiveProtocolEfficiency() const { 
+		if (((((totalPacketsReceived_ * (1024 - 48)) - totalPadding_)) == 0) || (totalPacketsReceived_ * 1024) == 0) {
+			return 0;
+		} else {
+			return ( ((double)((totalPacketsReceived_ * (1024 - 48)) - totalPadding_)) / (totalPacketsReceived_ * 1024) ); 
+		}
+	}
+	int EffectiveSendBPS() const { return ((int)(1024 * SendProtocolEfficiency())); }
+	int EffectiveReceiveBPS() const { return ((int)(1024 * ReceiveProtocolEfficiency())); }
+	int NumPacketsSent() const { return totalPacketsSent_; }
+	int BitErrorRate() const { 
+		if ((totalPacketsSent_ + totalPacketsReceived_) == 0 || totalErrors_ == 0) {
+			return 0;
+		} else {
+			return (totalErrors_/(totalPacketsSent_ + totalPacketsReceived_));
+		}
+	}
+	int NumACKs() const { return totalACKs_; }
+	int NumNAKs() const { return totalNAKs_; }
+	int TotalBitsSent() const { return (1024 * totalPacketsSent_); }
+	int TotalBitsReceived() const { return (1024 * totalPacketsReceived_); }
+	int ResponseTime() const { 
+		if (totalResponseTime_ == 0 || totalPacketsReceived_ == 0) {
+			return 0;
+		} else {
+			return totalResponseTime_/totalPacketsReceived_; 
+		}
+	}
+	int ElapsedTransferTime() const { return elapsedTime_; }
+	int TotalTimeouts() const { return totalTimeouts_; }
+	int TotalRequests() const { return totalRequests_; }
+	int AverageSendPadding() const { 
+		if (totalPacketsSent_ == 0 || totalPadding_ == 0) {
+			return 0;
+		} else {
+			return (totalPacketsSent_/totalPadding_); 
+		}
+	}
+	int AverageReceivePadding() const { 
+		if (totalPacketsReceived_ == 0 || totalPadding_ == 0) {
+			return 0;
+		} else {
+			return (totalPacketsReceived_/totalPadding_); 
+		}
+	}
+	int PacketsSentPerSecond() const { 
+		if (totalPacketsSent_ == 0 || elapsedTime_ == 0) {
+			return 0;
+		} else {
+			return (totalPacketsSent_/elapsedTime_); 
+		}
+	}
+	int PacketsReceivedPerSecond() const { 
+		if (totalPacketsReceived_ == 0 || elapsedTime_ == 0) {
+			return 0;
+		} else {
+			return (totalPacketsReceived_/elapsedTime_); 
+		}
+	}
+private:
+	int totalPacketsSent_;
+	int totalPacketsReceived_;
+	int totalErrors_;
+	int totalACKs_;
+	int totalNAKs_;
+	int totalTimeouts_;
+	int totalPadding_;
+	int totalRequests_;
+	int elapsedTime_;
+	int usefulBitsSent_;
+	int usefulBitsReceived_;
+	int totalResponseTime_;
+};
+
+TCHAR Name[] = TEXT("Be Creative");
 char str[80] = "";
 LRESULT CALLBACK WndProc (HWND, UINT, WPARAM, LPARAM);
 #pragma warning (disable: 4096)
 
-TCHAR	lpszCommName1[] = TEXT("com1");
+TCHAR	lpszCommName1[] = TEXT("COM1");
 TCHAR	lpszCommName2[] = TEXT("com2");
 TCHAR	lpszCommName3[] = TEXT("com3");
 TCHAR	lpszCommName4[] = TEXT("com4");
-HANDLE sendThread = 0;
-HANDLE recvThread = 0;
 int curCom = 0; //The last com port set up
 bool comset = false; //Conditional checking if at least one com port has been set
 bool KillReader = false; //used for killing the Reading thread
 COMMCONFIG	cc; //Com port configuration
-HANDLE hComm; //Handle to the com port
 HANDLE opThrd; //Handle to the reading thread
+HANDLE PollingThrd; //Handle to the reading thread
 DWORD opThrdID;
-OVERLAPPED ov;
-Globals global;
-CRITICAL_SECTION section;
-HANDLE semm;
+DWORD PollingThrdID;
+bool areaset = false;
+int iVertPos = 0, iHorzPos = 0;
+RECT text_area;
 
-Stats stats;
+HANDLE sendThread = 0;
+HANDLE recvThread = 0;
 
-RECT topleft;
-RECT topright;
-RECT bottomleft;
-RECT bottomright;
+Globals *global;
 
-//DWORD WINAPI OutputThread(LPVOID);
-std::fstream OpenFile(std::string FileLocation) {
-	std::fstream file(FileLocation);
-	return file;
-}
+DWORD WINAPI OutputThread(LPVOID);
+DWORD WINAPI PollingThread(LPVOID);
+std::fstream OpenFile(std::string FileLocation);
+bool OpenConnection(HANDLE& comm);
+void DisplayStatistics(const RECT& rect, const Stats& stats, HDC& hdc);
+void DisplayReceivedFileData(const RECT& rect, std::vector<std::string> FileContents, HDC& hdc);
 
-int HandleStats(CRITICAL_SECTION& section, Stats& stats, int cmd, int value) {
-	EnterCriticalSection(&section);
-	switch(cmd) {
-	case 1:
-		stats.SetTotalPacketsSent(value);
-	break;
-	case 2:
-		stats.SetTotalPacketsReceived(value);
-	break;
-	case 3:
-		stats.SetTotalErrors(value);
-	break;
-	case 4:
-		stats.SetTotalACKsReceived(value);
-	break;
-	case 5:
-		stats.SetTotalACKsSent(value);
-	break;
-	case 6:
-		stats.SetTotalNAKsReceived(value);
-	break;
-	case 7:
-		stats.SetTotalNAKsSent(value);
-	break;
-	case 8:
-		stats.SetTotalTimeouts(value);
-	break;
-	case 9:
-		stats.SetTotalPadding(value);
-	break;
-	case 10:
-		stats.SetTotalRequests(value);
-	break;
-	case 11:
-		stats.SetElapsedTime(value);
-	break;
-	case 12:
-		stats.SetUsefulBitsSent(value);
-	break;
-	case 13:
-		stats.SetUsefulBitsReceived(value);
-	break;
-	case 14:
-		stats.SetTotalResponseTime(value);
-	break;
-	case 15:
-		return stats.GetTotalPacketsSent();
-	break;
-	case 16:
-		return stats.GetTotalPacketsReceived();
-	break;
-	case 17:
-		return stats.GetTotalErrors();
-	break;
-	case 18:
-		return stats.GetTotalACKsReceived();
-	break;
-	case 19:
-		return stats.GetTotalACKsSent();
-	break;
-	case 20:
-		return stats.GetTotalNAKsReceived();
-	break;
-	case 21:
-		return stats.GetTotalNAKsSent();
-	break;
-	case 22:
-		return stats.GetTotalTimeouts();
-	break;
-	case 23:
-		return stats.GetTotalPadding();
-	break;
-	case 24:
-		return stats.GetTotalRequests();
-	break;
-	case 25:
-		return stats.GetElapsedTime();
-	break;
-	case 26:
-		return stats.GetUsefulBitsSent();
-	break;
-	case 27:
-		return stats.GetUsefulBitsReceived();
-	break;
-	case 28:
-		return stats.GetTotalResponseTime();
-	break;
-	case 29:
-		return stats.SendProtocolEfficiency();
-	break;
-	case 30:
-		return stats.ReceiveProtocolEfficiency();
-	break;
-	case 31:
-		return stats.EffectiveSendBPS();
-	break;
-	case 32:
-		return stats.EffectiveReceiveBPS();
-	break;
-	case 33:
-		return stats.NumPacketsSent();
-	break;
-	case 34:
-		return stats.BitErrorRate();
-	break;
-	case 35:
-		return stats.NumACKsReceived();
-	break;
-	case 36:
-		return stats.NumACKsSent();
-	break;
-	case 37:
-		return stats.NumNAKsReceived();
-	break;
-	case 38:
-		return stats.NumNAKsSent();
-	break;
-	case 39:
-		return stats.TotalBitsSent();
-	break;
-	case 40:
-		return stats.TotalBitsReceived();
-	break;
-	case 41:
-		return stats.ResponseTime();
-	break;
-	case 42:
-		return stats.ElapsedTransferTime();
-	break;
-	case 43:
-		return stats.TotalTimeouts();
-	break;
-	case 44:
-		return stats.TotalRequests();
-	break;
-	case 45:
-		return stats.AverageSendPadding();
-	break;
-	case 46:
-		return stats.AverageReceivePadding();
-	break;
-	case 47:
-		return stats.PacketsSentPerSecond();
-	break;
-	case 48:
-		return stats.PacketsReceivedPerSecond();
-	break;
-	default:
-	break;
-	}
-	LeaveCriticalSection(&section);
-	return 0;
-}
-
-/*------------------------------------------------------------------------------------------------------------------
--- FUNCTION: WinMain
---
--- DATE: September 29, 2013
---
--- REVISIONS: none
---
--- DESIGNER: Joshua Campbell
---
--- PROGRAMMER: Joshua Campbell
---
--- RETURNS: A Windows message wParam.
---
--- NOTES:
--- The Main function for the program. Responsible for creating the Windows window for the application.
-----------------------------------------------------------------------------------------------------------------------*/
+void DisplayElapsedTime(int time, HDC& hdc, int x, int& y);
+void DisplaySendProtocolEfficiency(double eff, HDC& hdc, int x, int& y);
+void DisplayReceiveProtocolEfficiency(double eff, HDC& hdc, int x, int& y);
+void DisplayEffectiveSendBPS(int bps, HDC& hdc, int x, int& y);
+void DisplayEffectiveReceiveBPS(int bps, HDC& hdc, int x, int& y);
+void DisplayNumPacketsSent(int count, HDC& hdc, int x, int& y);
+void DisplayBitErrorRate(int count, HDC& hdc, int x, int& y);
+void DisplayNumACKs(int count, HDC& hdc, int x, int& y);
+void DisplayNumNAKs(int count, HDC& hdc, int x, int& y);
+void DisplayTotalBitsSent(int count, HDC& hdc, int x, int& y);
+void DisplayTotalBitsReceived(int count, HDC& hdc, int x, int& y);
+void DisplayResponseTime(int time, HDC& hdc, int x, int& y);
+void DisplayTotalTimeouts(int count, HDC& hdc, int x, int& y);
+void DisplayTotalRequests(int count, HDC& hdc, int x, int& y);
+void DisplayAverageSendPadding(int count, HDC& hdc, int x, int& y);
+void DisplayAverageReceivePadding(int count, HDC& hdc, int x, int& y);
+void DisplayPacketsSentPerSecond(int pps, HDC& hdc, int x, int& y);
+void DisplayPacketsReceivedPerSecond(int pps, HDC& hdc, int x, int& y);
+//bool SendFile(std::ifstream* file);
+bool isStop = false;
 
 int WINAPI WinMain (HINSTANCE hInst, HINSTANCE hprevInstance,
  						  LPSTR lspszCmdParam, int nCmdShow)
@@ -289,43 +202,32 @@ int WINAPI WinMain (HINSTANCE hInst, HINSTANCE hprevInstance,
 	return Msg.wParam;
 }
 
-/*------------------------------------------------------------------------------------------------------------------
--- FUNCTION: WndProc
---
--- DATE: September 29, 2013
---
--- REVISIONS: none
---
--- DESIGNER: Joshua Campbell
---
--- PROGRAMMER: Joshua Campbell
---
--- RETURNS: False or 0
---
--- NOTES:
--- The main procedure for the application. Handles setting up COM ports, connecting, disconnecting, writing to the
--- serial port, and closing threads and connections when the program ends.
-----------------------------------------------------------------------------------------------------------------------*/
-
 LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
                           WPARAM wParam, LPARAM lParam)
 {
 	HDC hdc;
-	LPDCB lpDCB = &cc.dcb;
 	static int  cxClient,cyClient;
-	PAINTSTRUCT ps;
-	static int iVertPos = 0;
 	SCROLLINFO si;
+	LPDCB lpDCB = &cc.dcb;
 	char buffer[128] = {0};
 	DWORD bytesRead;
 	DWORD bytesWritten;
-	//OVERLAPPED ov = {0,0,0};
+	OVERLAPPED ov = {0,0,0};
+	PAINTSTRUCT ps;
+	RECT topleft;
+	RECT topright;
+	RECT bottomleft;
+	RECT bottomright;
+	Stats stats;
+	HANDLE _font;
+	BOOL fRedraw;
+	std::vector<std::string> file;
+	file.push_back("Hello world.");
 	std::fstream ifs;
 	OPENFILENAME ofn;
 	static TCHAR szFilter[] = TEXT ("All Files (*.*)\0*.*\0\0") ;
 	static TCHAR szFileName[MAX_PATH], szTitleName[MAX_PATH] ;
-	char packet[1024];
-	char packet2[2];
+
 
 	if (cxClient && cyClient) {
 		/*text_area.left = 0;
@@ -346,13 +248,11 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 	switch (Message)
 	{
 		case WM_CREATE:
-			ov.Offset = 0;
-			ov.OffsetHigh = 0;
-			ov.Pointer = 0;
-			ov.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-			semm = CreateSemaphore(NULL, 0, 1, NULL);
-			global.hSem = &semm;
-			InitializeCriticalSection(&section);
+
+			global = (Globals*)malloc(sizeof(Globals));
+
+			global->hSem = CreateSemaphore(NULL, 0, 1, NULL);
+
 		break;
 		case WM_COMMAND:
 			switch (LOWORD (wParam))
@@ -394,89 +294,25 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 					cc.dwSize = sizeof(COMMCONFIG);
 					cc.wVersion = 0x100;
 					
-            		if (!CommConfigDialog (lpszCommName4, hwnd, &cc)) {
+            		if (!CommConfigDialog (lpszCommName4, hwnd, &cc))
                			break;
-					}else {
+					else {
 						comset = true;
 						curCom = 4;
 					}
+
 				break;
 				case IDM_Connect:
-					//WaitForSingleObject(ov.hEvent, INFINITE);
-					//MessageBox(hwnd, TEXT(""), TEXT(""), MB_OK);
-					if (comset) {
-						if (curCom == 1) {
-							if ((hComm = CreateFile (lpszCommName1, GENERIC_READ | GENERIC_WRITE, 0,
-   									NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL))
-                        			== INVALID_HANDLE_VALUE)
-							{
-   								MessageBox (NULL, TEXT("Error opening COM port:"), TEXT(""), MB_OK);
-								return FALSE;
-							}
-						} else if (curCom == 2) {
-							if ((hComm = CreateFile (lpszCommName2, GENERIC_READ | GENERIC_WRITE, 0,
-   									NULL, OPEN_EXISTING, NULL, NULL))
-                        			== INVALID_HANDLE_VALUE)
-							{
-   								MessageBox (NULL, TEXT("Error opening COM port:"), TEXT(""), MB_OK);
-								return FALSE;
-							}
-						} else if (curCom == 3) {
-							if ((hComm = CreateFile (lpszCommName3, GENERIC_READ | GENERIC_WRITE, 0,
-   									NULL, OPEN_EXISTING, NULL, NULL))
-                        			== INVALID_HANDLE_VALUE)
-							{
-   								MessageBox (NULL, TEXT("Error opening COM port:"), TEXT(""), MB_OK);
-								return FALSE;
-							}
-						} else if (curCom == 4) {
-							if ((hComm = CreateFile (lpszCommName4, GENERIC_READ | GENERIC_WRITE, 0,
-   									NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL))
-                        			== INVALID_HANDLE_VALUE)
-							{
-   								MessageBox (NULL, TEXT("Error opening COM port:"), TEXT(""), MB_OK);
-								return FALSE;
-							}
-						}
-						lpDCB = &cc.dcb;
 
-						if (!SetCommState(hComm, lpDCB)) {
-							MessageBox (NULL, TEXT("Error setting COM state"), TEXT(""), MB_OK);
-							return false;
-						}
+					if (OpenConnection(global->hComm)) {
 
-						COMMTIMEOUTS timeouts;
-		
-						timeouts.ReadIntervalTimeout = MAXDWORD; 
-						timeouts.ReadTotalTimeoutMultiplier	= 0;
-						timeouts.ReadTotalTimeoutConstant = 0;
-						timeouts.WriteTotalTimeoutMultiplier = 0;
-						timeouts.WriteTotalTimeoutConstant = 0;
+						DWORD threadID;
 
-						if (!SetCommTimeouts(hComm, &timeouts)) {
-							MessageBox (NULL, TEXT("Error setting COM timeouts"), TEXT(""), MB_OK);
-							return false;
-						}
-						if (hComm) {
-							global.hComm = &hComm;
-							global.ov = ov;
-							//opThrd = CreateThread(NULL, 0, OutputThread, (LPVOID)hwnd, 0, &opThrdID );
-							recvThread = CreateThread(NULL, 0, receiverThread, &global, NULL, &opThrdID);
-							MessageBox(NULL, TEXT("connected"), TEXT(""), MB_OK);
-						} else {
-							MessageBox(NULL, TEXT("Please select a COM port."), TEXT(""), MB_OK);
-						}
-					} else {
-						MessageBox(NULL, TEXT("Please select a COM port."), TEXT(""), MB_OK);
+						recvThread = CreateThread(NULL, 0, receiverThread, global, NULL, &threadID);
 					}
 					
 				break;
-				case IDM_Disconnect: //kills the reading thread and closes the com port if they are active
-					if (KillReader == false && hComm) {
-						KillReader = true;
-						CloseHandle(hComm);
-						MessageBox(NULL, TEXT("disconnected"), TEXT(""), MB_OK);
-					}
+				case IDM_Disconnect:
 				break;
 				case IDM_OpenFile:
 
@@ -511,8 +347,8 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 						std::wstring wfilename(szFileName);
 						std::string filename;
 
-						for(int i = 0; i < wfilename.size(); i++) {
-							filename += wfilename[i];
+						for(auto x: wfilename) {
+							filename += x;
 						}
 						
 						ifs = OpenFile(filename);
@@ -523,15 +359,13 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 						DWORD exitStatus;
 
 						if (sendThread == 0 || (GetExitCodeThread(sendThread, &exitStatus) && exitStatus != STILL_ACTIVE)) {
-							sendThread = CreateThread(NULL, 0, sendBufferThread, &global, NULL, &threadID);
+							sendThread = CreateThread(NULL, 0, sendBufferThread, global, NULL, &threadID);
 						}
 
 					}
-				}
+
 				break;
-		case WM_CHAR:	// Process keystroke
-		break;
-		case WM_LBUTTONDOWN:
+			}
 		break;
 		case WM_SIZE:
 			cxClient = LOWORD(lParam);
@@ -587,6 +421,13 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 				//InvalidateRect(hwnd, &text_area, TRUE);
 			}
 		break;
+		case WM_CHAR:
+		break;
+		
+		case WM_DESTROY:	// Terminate program
+      		PostQuitMessage (0);
+		break;
+
 		case WM_PAINT:
 			hdc = BeginPaint(hwnd, &ps);
 			MoveToEx(hdc, cxClient - cxClient/3, 0, NULL);
@@ -594,19 +435,36 @@ LRESULT CALLBACK WndProc (HWND hwnd, UINT Message,
 			MoveToEx(hdc, 0, cyClient - cyClient/3, NULL);
 			LineTo(hdc, cxClient, cyClient - cyClient/3);
 			DisplayStatistics(topright, stats, hdc);
-			//DisplayReceivedFileData(topleft, file, hdc);
+			DisplayReceivedFileData(topleft, file, hdc);
 			ReleaseDC(hwnd, hdc);
-		break;
-		case WM_DESTROY:	// Terminate program
-			if (hComm) {
-				CloseHandle(hComm);
-			}
-      		PostQuitMessage (0);
 		break;
 		default:
 			return DefWindowProc (hwnd, Message, wParam, lParam);
 	}
 	return 0;
+}
+
+std::fstream OpenFile(std::string FileLocation) {
+	std::fstream file(FileLocation);
+	return file;
+}
+
+bool OpenConnection(HANDLE& hComm) {
+	if ((hComm = CreateFile (lpszCommName1, GENERIC_READ | GENERIC_WRITE, 0,
+		NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL))
+            == INVALID_HANDLE_VALUE)
+	{
+   		MessageBox (NULL, TEXT("Error opening COM port:"), TEXT(""), MB_OK);
+		return false;
+	}
+	return true;
+}
+
+void CloseConnection(HANDLE& comm) {
+	MessageBox (NULL, TEXT("disconnected"), TEXT(""), MB_OK);
+	if (comm != NULL) {
+		CloseHandle(comm);
+	}
 }
 
 void DisplayStatistics(const RECT& rect, const Stats& stats, HDC& hdc) {
@@ -619,8 +477,8 @@ void DisplayStatistics(const RECT& rect, const Stats& stats, HDC& hdc) {
 	DisplayEffectiveReceiveBPS(stats.EffectiveReceiveBPS(), hdc, xpos, ypos);
 	DisplayNumPacketsSent(stats.NumPacketsSent(), hdc, xpos, ypos);
 	DisplayBitErrorRate(stats.BitErrorRate(), hdc, xpos, ypos);
-	//DisplayNumACKs(stats.NumACKs(), hdc, xpos, ypos);
-	//DisplayNumNAKs(stats.NumNAKs(), hdc, xpos, ypos);
+	DisplayNumACKs(stats.NumACKs(), hdc, xpos, ypos);
+	DisplayNumNAKs(stats.NumNAKs(), hdc, xpos, ypos);
 	DisplayTotalBitsSent(stats.TotalBitsSent(), hdc, xpos, ypos);
 	DisplayTotalBitsReceived(stats.TotalBitsReceived(), hdc, xpos, ypos);
 	DisplayResponseTime(stats.ResponseTime(), hdc, xpos, ypos);
