@@ -1,0 +1,46 @@
+This application will send files between two wireless modems. The application will be using the (Be Creative) Protocol to send data. This will mean this program will be able to send and recieve files from other programs using this protocol too. The packets used in this program will be checked with CRC 16 and will be fully event driven.
+
+Statistics will be stored as packets are sent/recieved.
+
+The statistics are:
+	Protocol efficiency
+	Effective bits per second
+	Number of packets sent/recieved
+	Number of ACKs sent/recieved
+	Number of NAKs sent/recieved
+	Number of ENQs sent/recieved
+	Bits sent/recieved
+	Bit error rate
+	Response time (lag)
+	Total file transfer time
+	Number of timeouts
+	Average amount of padding in each packet
+	Packets sent/recieved per second
+
+
+
+
+This program was designed and programmed by:
+Jordan Marling 		- A00845629
+Damien Sathanielle 	- A00851340
+Cory Thomas			- A00817721
+Joshua Campbell		- A00815859
+
+
+
+All of the source files for this project are located in the /src folder.
+All of the design files for this project are located in the /design folder.
+
+
+
+To run the program:
+Double click on the .exe file.
+
+To select COM port:
+Click the Options->Port and select your desired port.
+
+To connect to the COM port:
+Click Options->Connect
+
+To send a file:
+Click Options->Open File and select which file you want to send.
